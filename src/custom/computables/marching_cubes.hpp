@@ -7,8 +7,8 @@ class MarchingCubesCompute : public Computable<MarchingCubesCompute, glm::vec4> 
 public:
     explicit MarchingCubesCompute(ShaderStorageBuffer<glm::vec4>&& ssbo, size_t num_components) 
         : Computable(std::move(ssbo)),
-          _shader_stage1(Shader::create(ShaderInfo { "shaders/marching_cubes-stage1.compute", ShaderType::COMPUTE })),
-          _shader_stage2(Shader::create(ShaderInfo { "shaders/marching_cubes-stage2.compute", ShaderType::COMPUTE })),
+          _shader_stage1(Shader::create(ShaderInfo { "shaders/marching_cubes_stage1.compute", ShaderType::COMPUTE })),
+          _shader_stage2(Shader::create(ShaderInfo { "shaders/marching_cubes_stage2.compute", ShaderType::COMPUTE })),
           _num_components(num_components)
     {
     }

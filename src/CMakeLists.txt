@@ -1,15 +1,15 @@
 file(GLOB SOURCES *.cpp)
 file(GLOB HEADERS *.hpp)
 
-# Copy textures
+# Copy textures also copy them to source directory for VS
 file(COPY custom/drawables/textures/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/textures)
 file(COPY custom/drawables/textures/ DESTINATION ${CMAKE_SOURCE_DIR}/textures)
 
-# Copy drawable shaders
+# Copy drawable shaders also copy them to source directory for VS
 file(COPY custom/drawables/shaders/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 file(COPY custom/drawables/shaders/ DESTINATION ${CMAKE_SOURCE_DIR}/shaders)
 
-#Copy compute shaders
+#Copy compute shaders also copy them to source directory for VS
 file(COPY custom/computables/shaders/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 file(COPY custom/computables/shaders/ DESTINATION ${CMAKE_SOURCE_DIR}/shaders)
 

@@ -341,24 +341,22 @@ struct GridPoints
     bool visible;
 };
 
-layout (std430, binding = 0) buffer Pos
-{
-    Triangle[] triangles;
-};
-
-layout (std430, binding = 0) buffer Pos
+layout (std430, binding = 0) buffer PointsBuffer
 {
     GridPoints[1000] points;
 };
 
-AppendStructuredBuffer<Triangle> triangles;
+layout (std430, binding = 1) buffer TriangleBuffer
+{
+    Triangle[] triangles;
+};
 
-uniform atomic_uint counter;
+layout(binding = 0) uniform atomic_uint counter;
 uniform int axis_length;
 uniform float iso_level;
 uniform int num_triangles;
 
-float3 interpolateVerts(float4 v1, float4 v2) {
+vec3 interpolateVerts(vec4 v1, vec4 v2) {
     float t = (iso_level - v1.w) / (v2.w - v1.w);
     return v1.xyz + t * (v2.xyz-v1.xyz);
 }
@@ -369,59 +367,59 @@ int indexFromCoord(int x, int y, int z) {
 
 void main()
 {
-    uvec3 gid = gl_GlobalInvocationID;
+    // ivec3 gid = ivec3(gl_GlobalInvocationID.xyz);
 
-    // Stop one point before the end because voxel includes neighbouring points
-    if (gid.x >= axis_length-1 || gid.y >= axis_length-1 || gid.z >= axis_length-1) {
-        return;
-    }
+    // // Stop one point before the end because voxel includes neighbouring points
+    // if (gid.x >= axis_length-1 || gid.y >= axis_length-1 || gid.z >= axis_length-1) {
+    //     return;
+    // }
 
-    // 8 corners of the current cube
-    vec4 cubeCorners[8] = {
-        points[indexFromCoord(gid.x, gid.y, gid.z)],
-        points[indexFromCoord(gid.x + 1, gid.y, gid.z)],
-        points[indexFromCoord(gid.x + 1, gid.y, gid.z + 1)],
-        points[indexFromCoord(gid.x, gid.y, gid.z + 1)],
-        points[indexFromCoord(gid.x, gid.y + 1, gid.z)],
-        points[indexFromCoord(gid.x + 1, gid.y + 1, gid.z)],
-        points[indexFromCoord(gid.x + 1, gid.y + 1, gid.z + 1)],
-        points[indexFromCoord(gid.x, gid.y + 1, gid.z + 1)]
-    };
+    // // 8 corners of the current cube
+    // vec4 cubeCorners[8] = {
+    //     points[indexFromCoord(gid.x, gid.y, gid.z)],
+    //     points[indexFromCoord(gid.x + 1, gid.y, gid.z)],
+    //     points[indexFromCoord(gid.x + 1, gid.y, gid.z + 1)],
+    //     points[indexFromCoord(gid.x, gid.y, gid.z + 1)],
+    //     points[indexFromCoord(gid.x, gid.y + 1, gid.z)],
+    //     points[indexFromCoord(gid.x + 1, gid.y + 1, gid.z)],
+    //     points[indexFromCoord(gid.x + 1, gid.y + 1, gid.z + 1)],
+    //     points[indexFromCoord(gid.x, gid.y + 1, gid.z + 1)]
+    // };
 
-    // Calculate unique index for each cube configuration.
-    // There are 256 possible values
-    // A value of 0 means cube is entirely inside surface; 255 entirely outside.
-    // The value is used to look up the edge table, which indicates which edges of the cube are cut by the isosurface.
-    int cubeIndex = 0;
-    if (cubeCorners[0].w < iso_level) cubeIndex |= 1;
-    if (cubeCorners[1].w < iso_level) cubeIndex |= 2;
-    if (cubeCorners[2].w < iso_level) cubeIndex |= 4;
-    if (cubeCorners[3].w < iso_level) cubeIndex |= 8;
-    if (cubeCorners[4].w < iso_level) cubeIndex |= 16;
-    if (cubeCorners[5].w < iso_level) cubeIndex |= 32;
-    if (cubeCorners[6].w < iso_level) cubeIndex |= 64;
-    if (cubeCorners[7].w < iso_level) cubeIndex |= 128;
+    // // Calculate unique index for each cube configuration.
+    // // There are 256 possible values
+    // // A value of 0 means cube is entirely inside surface; 255 entirely outside.
+    // // The value is used to look up the edge table, which indicates which edges of the cube are cut by the isosurface.
+    // int cubeIndex = 0;
+    // if (cubeCorners[0].w < iso_level) cubeIndex |= 1;
+    // if (cubeCorners[1].w < iso_level) cubeIndex |= 2;
+    // if (cubeCorners[2].w < iso_level) cubeIndex |= 4;
+    // if (cubeCorners[3].w < iso_level) cubeIndex |= 8;
+    // if (cubeCorners[4].w < iso_level) cubeIndex |= 16;
+    // if (cubeCorners[5].w < iso_level) cubeIndex |= 32;
+    // if (cubeCorners[6].w < iso_level) cubeIndex |= 64;
+    // if (cubeCorners[7].w < iso_level) cubeIndex |= 128;
 
-    // Create triangles for current cube configuration
-    for (int i = 0; triangulation[cubeIndex][i] != -1; i +=3) {
-        // Get indices of corner points A and B for each of the three edges
-        // of the cube that need to be joined to form the triangle.
-        int a0 = cornerIndexAFromEdge[triangulation[cubeIndex][i]];
-        int b0 = cornerIndexBFromEdge[triangulation[cubeIndex][i]];
+    // // Create triangles for current cube configuration
+    // for (int i = 0; triangulation[cubeIndex][i] != -1; i +=3) {
+    //     // Get indices of corner points A and B for each of the three edges
+    //     // of the cube that need to be joined to form the triangle.
+    //     int a0 = cornerIndexAFromEdge[triangulation[cubeIndex][i]];
+    //     int b0 = cornerIndexBFromEdge[triangulation[cubeIndex][i]];
 
-        int a1 = cornerIndexAFromEdge[triangulation[cubeIndex][i+1]];
-        int b1 = cornerIndexBFromEdge[triangulation[cubeIndex][i+1]];
+    //     int a1 = cornerIndexAFromEdge[triangulation[cubeIndex][i+1]];
+    //     int b1 = cornerIndexBFromEdge[triangulation[cubeIndex][i+1]];
 
-        int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i+2]];
-        int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i+2]];
+    //     int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i+2]];
+    //     int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i+2]];
 
-        Triangle tri;
-        tri.vertexA = interpolateVerts(cubeCorners[a0], cubeCorners[b0]);
-        tri.vertexB = interpolateVerts(cubeCorners[a1], cubeCorners[b1]);
-        tri.vertexC = interpolateVerts(cubeCorners[a2], cubeCorners[b2]);
-        trianges[counter] = tri;
-        atomicCounterIncrement(counter);
-    }
+    //     Triangle tri;
+    //     tri.vertexA = interpolateVerts(cubeCorners[a0], cubeCorners[b0]);
+    //     tri.vertexB = interpolateVerts(cubeCorners[a1], cubeCorners[b1]);
+    //     tri.vertexC = interpolateVerts(cubeCorners[a2], cubeCorners[b2]);
+    //     trianges[counter] = tri;
+    //     atomicCounterIncrement(counter);
+    // }
 
-    memoryBarrier();
+    // memoryBarrier();
 }

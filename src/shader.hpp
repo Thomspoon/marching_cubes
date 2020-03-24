@@ -60,10 +60,6 @@ public:
         return Shader(program);
     }
 
-
-
-    
-
     static GLuint create_internal(ShaderInfo& info, uint8_t& initialized_count)
     {
         std::string shader_source;
@@ -88,7 +84,7 @@ public:
             // convert stream into string
             shader_source = shader_stream.str();
         } catch (std::ifstream::failure& e) {
-            throw std::runtime_error(std::string("Failed to compile shader: ") + std::string(info.name));
+            throw std::runtime_error(std::string("Failed to load shader: ") + std::string(info.name));
         }
         
         auto shader = Shader::compile_shader(shader_source.c_str(), info.shader_type);
