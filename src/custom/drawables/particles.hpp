@@ -29,7 +29,7 @@ public:
         vbo.bind();
 
         // Reserve data in buffer
-        vbo.send_data_raw(nullptr, amount * sizeof(glm::vec3), StorageType::DYNAMIC);
+        vbo.send_data_raw(nullptr, amount * sizeof(glm::vec4), StorageType::DYNAMIC);
 
         vbo.enable_attribute_pointer(0, 4, VertexDataType::FLOAT, 4, 0);
         

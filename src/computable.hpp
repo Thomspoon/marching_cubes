@@ -18,14 +18,16 @@ template<typename Internal>
 struct ShaderStorageBuffer {
     using SsbInner = GLuint;
 
-    explicit ShaderStorageBuffer() : _ssb(0u) {
+    explicit ShaderStorageBuffer(size_t index) : _ssb(0u), _index(index) {
         GL_CHECK(glGenBuffers(1, &_ssb));
+        std::cout << "Created buffer with index: " << _index << std::endl;
     }
 
     explicit ShaderStorageBuffer(ShaderStorageBuffer&& other) 
-        : _ssb(other._ssb) 
+        : _ssb(other._ssb), _index(other._index)
     {
         other._ssb = 0;
+        other._index = 0;
     }
 
     ~ShaderStorageBuffer() {
@@ -35,19 +37,20 @@ struct ShaderStorageBuffer {
     // Reserve data inside buffer storage
     void reserve_storage(size_t size, StorageType type)
     {
-        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssb));
+        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _index, _ssb));
         GL_CHECK(glBufferData(GL_SHADER_STORAGE_BUFFER, size, nullptr, static_cast<GLenum>(type)));
         _size = size;
     }
 
     Internal *map_buffer(BufferIntent intent) const
     {
-        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, _ssb));
-        Internal *buffer = reinterpret_cast<Internal *>(glMapBuffer(
+        std::cout << "Binding index " << _index << std::endl;
+        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _index, _ssb));
+        auto *buffer = GL_CHECK(glMapBuffer(
             GL_SHADER_STORAGE_BUFFER,
             static_cast<GLbitfield>(intent)
         ));
-        return buffer;
+        return reinterpret_cast<Internal *>(buffer);
     }
 
     void unmap_buffer() const
@@ -59,6 +62,7 @@ struct ShaderStorageBuffer {
 
     SsbInner _ssb;
     size_t _size;
+    size_t _index;
 };
 
 template <typename Child, typename Internal>

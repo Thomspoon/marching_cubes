@@ -81,20 +81,13 @@ float octave_noise(float x, float y, float z, int octaves, float persistence)
 
 layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
-struct GridPoints
-{
-    vec3 position;
-    bool visible;
-};
-
 layout (std430, binding = 0) buffer Pos
 {
-    GridPoints[10][10][10] Grid;
+    vec4[10][10][10] Grid;
 };
 
-uniform float sea_level;
-uniform int octaves;
 uniform float persistence;
+uniform int octaves;
 
 void main()
 {
@@ -102,18 +95,9 @@ void main()
     uvec3 gid = gl_GlobalInvocationID;
 
     // TODO: Make noise more ergonomic
-    float perlin = octave_noise(float(gid.x) - 0.5, float(gid.y) - 0.5, float(gid.z) - 0.5, 6, 0.5);
+    float perlin = octave_noise(float(gid.x) - 0.5, float(gid.y) - 0.5, float(gid.z) - 0.5, octaves, persistence);
 
-    // TODO: Remove offset after triangulation has been figured out
-    float offset = 0.0;
-    bool visible = true;
-    if(perlin < sea_level) {
-        offset = -1000.0f;
-        visible = false;
-    }
-
-    Grid[gid.x][gid.y][gid.z].position = vec3(gid.x, gid.y - offset, gid.z);
-    Grid[gid.x][gid.y][gid.z].visible = visible;
+    Grid[gid.x][gid.y][gid.z] = vec4(gid.x, gid.y, gid.z, perlin);
 
     memoryBarrier();
 }

@@ -65,8 +65,6 @@ public:
         std::string shader_source;
         std::ifstream shader_file;
         std::stringstream shader_stream;
-
-        std::cout << "Shader: " << info.name << '\n';
         
         try {
             // ensure ifstream objects can throw exceptions:
@@ -83,7 +81,7 @@ public:
 
             // convert stream into string
             shader_source = shader_stream.str();
-        } catch (std::ifstream::failure& e) {
+        } catch (std::ifstream::failure&) {
             throw std::runtime_error(std::string("Failed to load shader: ") + std::string(info.name));
         }
         
@@ -112,12 +110,11 @@ public:
     void set_mat4(const char *name, const glm::mat4 &mat) const;
 
 
-protected:
+private:
     Shader(GLuint);
 
     static GLuint compile_shader(const char *shader, GLenum shader_type);
     static GLuint link_program(GLuint program);
 
     GLuint m_program;
-
 };

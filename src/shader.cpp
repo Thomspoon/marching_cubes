@@ -51,9 +51,8 @@ GLuint Shader::link_program(GLuint program) {
     return program;
 }
 
-
 void Shader::use() const {
-    glUseProgram(m_program);
+    GL_CHECK(glUseProgram(m_program));
 }
 
 void Shader::set_bool(const char *name, bool value) const
@@ -90,7 +89,7 @@ void Shader::set_int(const char *name, int value) const
 
 void Shader::set_float(const char *name, float value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = GL_CHECK(glGetUniformLocation(m_program, name));
 
 #ifdef __DEBUG__
     if(variable == -1) {
