@@ -18,6 +18,24 @@ static void glfw_error_callback(int error, const char* description)
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
 }
 
+void GLAPIENTRY
+MessageCallback( GLenum source,
+                 GLenum type,
+                 GLuint id,
+                 GLenum severity,
+                 GLsizei length,
+                 const GLchar* message,
+                 const void* userParam )
+{
+    if(type != GL_DEBUG_TYPE_ERROR) {
+        return;
+    }
+
+    fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+           ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+            type, severity, message );
+}
+
 Window::Window(const unsigned int width, const unsigned int height, const char *window_name) {
     // glfw: initialize and configure
     // ------------------------------
@@ -47,7 +65,11 @@ Window::Window(const unsigned int width, const unsigned int height, const char *
     {
         glfwTerminate();
         throw std::runtime_error("Failed to initialize GLAD");
-    }  
+    }
+
+    // During init, enable debug output
+    glEnable              ( GL_DEBUG_OUTPUT );
+    glDebugMessageCallback( MessageCallback, 0 );
 
     m_window = window;
 }
@@ -97,7 +119,7 @@ Keyboard::KeyState Window::get_key(Keyboard::Key key) {
 }
 
 float Window::get_elapsed_time() {
-    return glfwGetTime();
+    return static_cast<float>(glfwGetTime());
 }
 
 void Window::set_mouse_callback(GLFWmousebuttonfun mouse_btn_func, GLFWcursorposfun mouse_pos_func) {

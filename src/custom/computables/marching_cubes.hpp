@@ -274,14 +274,14 @@ public:
     explicit MarchingCubesCompute(
         ShaderStorageBuffer<glm::vec4>&& ssbo, 
         ShaderStorageBuffer<Triangle>&& ssbo_triangles, 
-        ShaderStorageBuffer<int>&& ssbo_num_triangles, 
-        ShaderStorageBuffer<int>&& ssbo_triangulation, 
+        ShaderStorageBuffer<int>&& ssbo_triangulation,
+        AtomicBufferObject&& asb_num_triangles,
         size_t num_components
     ) 
         : Computable(std::move(ssbo)),
           _triangles(std::move(ssbo_triangles)),
-          _num_triangles(std::move(ssbo_num_triangles)),
           _triangulation(std::move(ssbo_triangulation)),
+          _num_triangles_buffer(std::move(asb_num_triangles)),
           _shader_stage1(Shader::create(ShaderInfo { "shaders/marching_cubes_stage1.compute", ShaderType::COMPUTE })),
           _shader_stage2(Shader::create(ShaderInfo { "shaders/marching_cubes_stage2.compute", ShaderType::COMPUTE })),
           _num_components(num_components)
@@ -290,15 +290,23 @@ public:
 
     static std::shared_ptr<MarchingCubesCompute> create_impl(int num_components) {
         auto ssbo = ShaderStorageBuffer<glm::vec4>(0);
-        ssbo.reserve_storage(num_components * sizeof(glm::vec4), StorageType::STATIC);
+        ssbo.reserve_storage(num_components * sizeof(glm::vec4), StorageType::DYNAMIC);
+
+        // Reset buffer to zero
+        glm::vec4* buffer = ssbo.map_buffer(BufferIntent::WRITE);
+        assert(buffer != nullptr);
+        for(auto i = 0; i < num_components; i++)
+        {
+            buffer[i].x = 0.0;
+            buffer[i].y = 0.0;
+            buffer[i].z = 0.0;
+        }
+        ssbo.unmap_buffer();
 
         auto ssbo_triangles = ShaderStorageBuffer<Triangle>(1);
-        ssbo_triangles.reserve_storage(0, StorageType::STATIC);
+        ssbo_triangles.reserve_storage(sizeof(Triangle) * 10000, StorageType::DYNAMIC);
 
-        auto ssbo_num_triangles = ShaderStorageBuffer<int>(2);
-        ssbo_num_triangles.reserve_storage(sizeof(int), StorageType::STATIC);
-
-        auto ssbo_triangulation = ShaderStorageBuffer<int>(3);
+        auto ssbo_triangulation = ShaderStorageBuffer<int>(2);
         ssbo_triangulation.reserve_storage(sizeof(triangulation), StorageType::STATIC);
 
         auto triangulation_buffer = ssbo_triangulation.map_buffer(BufferIntent::WRITE);
@@ -306,41 +314,68 @@ public:
         memcpy(triangulation_buffer, triangulation, sizeof(triangulation));
         ssbo_triangulation.unmap_buffer();
 
-        return std::make_shared<MarchingCubesCompute>(std::move(ssbo),std::move(ssbo_triangles), std::move(ssbo_num_triangles), std::move(ssbo_triangulation), num_components);
+        auto asb_num_triangles = AtomicBufferObject(0);
+        asb_num_triangles.reserve_storage(sizeof(GLuint), StorageType::DYNAMIC);
+
+        return std::make_shared<MarchingCubesCompute>(
+            std::move(ssbo),
+            std::move(ssbo_triangles),
+            std::move(ssbo_triangulation),
+            std::move(asb_num_triangles),
+            num_components
+        );
     }
 
-    void dispatch_impl(float iso_level) const {
+    void dispatch_impl(float iso_level) {
+        // Reset triangle count
+        auto num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
+        *num_triangles = 0;
+        _num_triangles_buffer.unmap_buffer();
+
         _shader_stage1.use();
         _shader_stage1.set_float("persistence", 0.5);
         _shader_stage1.set_int("octaves", 6);
-        GL_CHECK(glDispatchCompute(10, 10, 10));
+        GL_CHECK(glDispatchCompute(2, 2, 2));
         GL_CHECK(glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT));
 
-        _shader_stage2.use();
-        _shader_stage2.set_float("iso_level", iso_level);
-        _shader_stage2.set_int("axis_length", 10);
-        GL_CHECK(glDispatchCompute(10, 10, 10));
-        GL_CHECK(glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT));
+        // _shader_stage2.use();
+        // _shader_stage2.set_float("iso_level", iso_level);
+        // _shader_stage2.set_int("axis_length", 10);
+        // GL_CHECK(glDispatchCompute(1, 1, 1));
+        // GL_CHECK(glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT));
 
-        int * num_triangles = _num_triangles.map_buffer(BufferIntent::READ);
-        std::cout << "Number of triangles: " << *num_triangles << std::endl;
-        _num_triangles.unmap_buffer();
+        // num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
+        // _num_triangles = *reinterpret_cast<GLuint*>(num_triangles);
+        // _num_triangles_buffer.unmap_buffer();
     }
 
-    glm::vec4 * expose_buffer() const {
+    GLuint num_triangles() const {
+        return _num_triangles;
+    }
+
+    Triangle* expose_triangle_buffer() const {
+        return _triangles.map_buffer_range(0, _num_triangles, BufferIntentRange::READ);
+    }
+
+    void close_triangle_buffer() const {
+        _triangles.unmap_buffer();
+    }
+
+    glm::vec4* expose_points_buffer() const {
         return _ssbo.map_buffer(BufferIntent::READ);
     }
 
-    void close_buffer() const {
+    void close_points_buffer() const {
         _ssbo.unmap_buffer();
     }
 
 private:
     ShaderStorageBuffer<Triangle> _triangles;
-    ShaderStorageBuffer<int> _num_triangles;
     ShaderStorageBuffer<int> _triangulation;
+    AtomicBufferObject _num_triangles_buffer;
 
     Shader _shader_stage1;
     Shader _shader_stage2;
     size_t _num_components;
+    GLuint _num_triangles;
 };

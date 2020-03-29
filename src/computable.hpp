@@ -9,18 +9,72 @@
 #include <glad/glad.h>
 #include "drawable.hpp"
 
-enum BufferIntent {
+enum class BufferIntent {
     READ = GL_READ_ONLY,
     WRITE = GL_WRITE_ONLY,
 };
 
+enum class BufferIntentRange {
+    READ = GL_MAP_READ_BIT,
+};
+
+// Note: Only supports one atomic integer at the moment
+struct AtomicBufferObject {
+    using InternalStorageType = GLuint;
+    constexpr static auto InternalBufferType = GL_ATOMIC_COUNTER_BUFFER;
+
+    explicit AtomicBufferObject(GLuint index) : _asb(0u), _index(index) {
+        GL_CHECK(glGenBuffers(1, &_asb));
+    }
+
+    explicit AtomicBufferObject(AtomicBufferObject&& other) 
+        : _asb(other._asb), _index(other._index)
+    {
+        other._asb = 0;
+        other._index = 0;
+    }
+
+    ~AtomicBufferObject() {
+        glDeleteBuffers(1, &_asb);
+    }
+
+    // Reserve data inside buffer storage
+    void reserve_storage(GLuint size, StorageType type)
+    {
+        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _asb));
+        GL_CHECK(glBufferData(InternalBufferType, size, nullptr, static_cast<GLenum>(type)));
+        _size = size;
+    }
+
+    GLuint* map_buffer(BufferIntent intent) const
+    {
+        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _asb));
+        auto *buffer = GL_CHECK(glMapBuffer(
+            InternalBufferType,
+            static_cast<GLbitfield>(intent)
+        ));
+        return reinterpret_cast<GLuint *>(buffer);
+    }
+
+    void unmap_buffer() const
+    {
+        GL_CHECK(glUnmapBuffer(InternalBufferType));
+    }
+
+    // TODO: Create MapBufferRange which lets you specify exact bytes to map
+
+    InternalStorageType _asb;
+    GLuint _size;
+    GLuint _index;
+};
+
 template<typename Internal>
 struct ShaderStorageBuffer {
-    using SsbInner = GLuint;
+    using InternalStorageType = GLuint;
+    constexpr static auto InternalBufferType = GL_SHADER_STORAGE_BUFFER;
 
-    explicit ShaderStorageBuffer(size_t index) : _ssb(0u), _index(index) {
+    explicit ShaderStorageBuffer(GLuint index) : _ssb(0u), _index(index) {
         GL_CHECK(glGenBuffers(1, &_ssb));
-        std::cout << "Created buffer with index: " << _index << std::endl;
     }
 
     explicit ShaderStorageBuffer(ShaderStorageBuffer&& other) 
@@ -35,19 +89,36 @@ struct ShaderStorageBuffer {
     }
 
     // Reserve data inside buffer storage
-    void reserve_storage(size_t size, StorageType type)
+    void reserve_storage(GLuint size, StorageType type)
     {
-        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _index, _ssb));
-        GL_CHECK(glBufferData(GL_SHADER_STORAGE_BUFFER, size, nullptr, static_cast<GLenum>(type)));
+        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _ssb));
+        GL_CHECK(glBufferData(InternalBufferType, size, nullptr, static_cast<GLenum>(type)));
         _size = size;
     }
 
     Internal *map_buffer(BufferIntent intent) const
     {
-        std::cout << "Binding index " << _index << std::endl;
-        GL_CHECK(glBindBufferBase(GL_SHADER_STORAGE_BUFFER, _index, _ssb));
+        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _ssb));
         auto *buffer = GL_CHECK(glMapBuffer(
-            GL_SHADER_STORAGE_BUFFER,
+            InternalBufferType,
+            static_cast<GLbitfield>(intent)
+        ));
+        return reinterpret_cast<Internal *>(buffer);
+    }
+
+    Internal *map_buffer_range(GLintptr offset, GLsizeiptr length, BufferIntentRange intent) const
+    {
+        if (length == 0) {
+            return nullptr;
+        }
+
+        std::cout << "Offset: " << offset << ", " << length << std::endl;
+
+        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _ssb));
+        auto *buffer = GL_CHECK(glMapBufferRange(
+            InternalBufferType,
+            offset,
+            length,
             static_cast<GLbitfield>(intent)
         ));
         return reinterpret_cast<Internal *>(buffer);
@@ -55,14 +126,12 @@ struct ShaderStorageBuffer {
 
     void unmap_buffer() const
     {
-        GL_CHECK(glUnmapBuffer(GL_SHADER_STORAGE_BUFFER));
+        GL_CHECK(glUnmapBuffer(InternalBufferType));
     }
 
-    // TODO: Create MapBufferRange which lets you specify exact bytes to map
-
-    SsbInner _ssb;
-    size_t _size;
-    size_t _index;
+    InternalStorageType _ssb;
+    GLuint _size;
+    GLuint _index;
 };
 
 template <typename Child, typename Internal>

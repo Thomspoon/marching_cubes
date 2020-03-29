@@ -9,15 +9,23 @@
 // positions
 class Particles : public Drawable<Particles> {
 public:
-    Particles(VertexArrayObject&& vao, VertexBufferObject&& vbo, GLuint amount) 
+    Particles(
+        VertexArrayObject&& vao, 
+        VertexBufferObject&& vbo, 
+        VertexArrayObject&& vao_triangles, 
+        VertexBufferObject&& vbo_triangles, 
+        GLuint amount
+    ) 
         : Drawable(std::move(vao)), 
           _vbo(std::move(vbo)),
+          _vao_triangles(std::move(vao_triangles)),
+          _vbo_triangles(std::move(vbo_triangles)),
           _shader( // Big yikes
               Shader::create(
                   ShaderInfo { "shaders/mvm.vert", ShaderType::VERTEX }, 
                   ShaderInfo { "shaders/mvm.frag", ShaderType::FRAGMENT })),
           _amount(amount),
-          _marching_cubes_compute_stage1(MarchingCubesCompute::create(amount))
+          _marching_cubes(MarchingCubesCompute::create(amount))
     {
     }
 
@@ -28,14 +36,26 @@ public:
         vao.bind();
         vbo.bind();
 
-        // Reserve data in buffer
+        // Reserve data in buffer for number of points
         vbo.send_data_raw(nullptr, amount * sizeof(glm::vec4), StorageType::DYNAMIC);
 
         vbo.enable_attribute_pointer(0, 4, VertexDataType::FLOAT, 4, 0);
         
         vao.unbind();
 
-        return std::make_shared<Particles>(std::move(vao), std::move(vbo), amount);
+        auto vao_triangles = VertexArrayObject();
+        auto vbo_triangles = VertexBufferObject(VertexBufferType::ARRAY);
+
+        vao_triangles.bind();
+        vbo_triangles.bind();
+
+        vbo_triangles.send_data_raw(nullptr, 100 * sizeof(glm::vec3), StorageType::DYNAMIC);
+
+        vbo_triangles.enable_attribute_pointer(0, 3, VertexDataType::FLOAT, 3, 0);
+        
+        vao_triangles.unbind();
+
+        return std::make_shared<Particles>(std::move(vao), std::move(vbo), std::move(vao_triangles), std::move(vbo_triangles), amount);
     }
 
     DrawType draw_impl(glm::mat4& view, glm::mat4& projection) const {
@@ -57,21 +77,42 @@ public:
 
     void update(float sea_level)
     {
-        _marching_cubes_compute_stage1->dispatch(sea_level);    
+        _marching_cubes->dispatch(sea_level);    
 
-        glm::vec4 *data = _marching_cubes_compute_stage1->expose_buffer();
+        glm::vec4 *data = _marching_cubes->expose_points_buffer();
+        if(data == nullptr) {
+            return;
+        }
 
         // Send updated data to buffer
-        _vbo.bind();
+        _vao.bind();
         _vbo.send_data_raw(data, _amount * sizeof(glm::vec4), StorageType::DYNAMIC);
-        _vbo.unbind();
+        _vao.unbind();
 
-        _marching_cubes_compute_stage1->close_buffer();
+        _marching_cubes->close_points_buffer();
+
+        // Triangle *triangles = _marching_cubes->expose_triangle_buffer();
+        // if(data == nullptr) {
+        //     return;
+        // }
+
+        // auto num_triangles = _marching_cubes->num_triangles();
+
+        // std::cout << "Copying " << num_triangles << " triangles!" << std::endl;
+
+        // // Send updated data to buffer
+        // _vao_triangles.bind();
+        // _vbo_triangles.send_data_raw(data, num_triangles * sizeof(Triangle), StorageType::DYNAMIC);
+        // _vao_triangles.unbind();
+
+        // _marching_cubes->close_triangle_buffer();
     }
 
 private:
     VertexBufferObject _vbo;
+    VertexArrayObject _vao_triangles;
+    VertexBufferObject _vbo_triangles;
     Shader _shader;
-    GLuint _amount;
-    std::shared_ptr<MarchingCubesCompute> _marching_cubes_compute_stage1;
+    GLsizei _amount;
+    std::shared_ptr<MarchingCubesCompute> _marching_cubes;
 };

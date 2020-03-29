@@ -50,17 +50,12 @@ layout (std430, binding = 1) buffer TriangleBuffer
     Triangle[] triangles;
 };
 
-layout (std430, binding = 2) buffer TriangleNum
-{
-    float num_triangles;
-};
-
-layout (std430, binding = 3) buffer Triangulation
+layout (std430, binding = 2) buffer Triangulation
 {
     int triangulation[256][16];
 };
 
-layout(binding = 0) uniform atomic_uint counter;
+layout(binding = 0) uniform atomic_uint num_triangles;
 uniform int axis_length;
 uniform float iso_level;
 
@@ -125,9 +120,10 @@ void main()
         tri.vertexA = interpolateVerts(cubeCorners[a0], cubeCorners[b0]);
         tri.vertexB = interpolateVerts(cubeCorners[a1], cubeCorners[b1]);
         tri.vertexC = interpolateVerts(cubeCorners[a2], cubeCorners[b2]);
-        triangles[0] = tri;
-        //atomicCounterIncrement(counter);
-    }
+        triangles[atomicCounter(num_triangles)] = tri;
 
-    memoryBarrier();
+        memoryBarrier();
+
+        atomicCounterIncrement(num_triangles);
+    }
 }

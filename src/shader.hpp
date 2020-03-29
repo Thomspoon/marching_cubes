@@ -34,7 +34,7 @@ public:
     static Shader create(Args&&... info) {
         static_assert(
             ((std::is_same<Args, ShaderInfo>::value) && ... && true), 
-            "Only ShaderInfo is allows as a parameter to Shader::create"
+            "Only ShaderInfo is allowed as a parameter to Shader::create"
         );
 
         // Initialize all shaders passed in

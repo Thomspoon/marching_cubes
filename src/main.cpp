@@ -100,7 +100,7 @@ int main() try {
     window.enable_capability(Capability::DEPTH_TEST);
     window.enable_capability(Capability::PROGRAM_POINT_SIZE);
 
-    auto number_of_components = 1000;
+    auto number_of_components = 8;
     auto particles = Particles::create(number_of_components);
 
     auto delta_time = 0.0f;
@@ -139,12 +139,11 @@ int main() try {
         particles->update(sea_level);
         particles->draw(view, projection);
 
-
         ImGui::Begin("Procedural Generation Renderer");
 
         ImGui::Text("Edit Configuration Parameters");
 
-        ImGui::SliderFloat("sea_level", &sea_level, -0.5f, 0.4f);
+        ImGui::SliderFloat("sea_level", &sea_level, -0.4f, 0.1f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 

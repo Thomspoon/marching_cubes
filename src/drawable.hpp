@@ -12,23 +12,20 @@
 
 #include <glad/glad.h>
 
+#define __DEBUG__
+
 // This is a convenience define that will check for errors after each hidden
-// opengl call, and if GL_CALL_HISTORY is defined, it will also log gl calls 
+// opengl call, and if API_DUMP is defined, it will also log gl calls 
 // to stdout
 #define API_DUMP 0
+#ifdef __DEBUG__
 #define GL_CHECK(func) func;                                                \
 if(API_DUMP) {                                                              \
     std::cout << #func << std::endl;                                        \
-}                                                                           \
-if(GLenum err = glGetError()) {                                             \
-    std::string err_string = "GL ERROR "                                    \
-        + std::to_string(err)                                               \
-        + " at line "                                                       \
-        + std::to_string(__LINE__)                                          \
-        + " in " #func " at "                                               \
-        + std::string(__FUNCSIG__);                                         \
-    throw std::runtime_error(err_string);                                   \
 }
+#else
+#define GL_CHECK(var) var;
+#endif
 
 using Indices = std::vector<unsigned int>;
 
@@ -92,8 +89,8 @@ struct VertexBufferObject {
         glGenBuffers(1, &vbo);
     }
 
-    void enable_attribute_pointer(std::size_t index, std::size_t size, VertexDataType t_type, std::size_t stride, std::size_t offset) {
-        auto width = 0;
+    void enable_attribute_pointer(GLsizei index, GLint size, VertexDataType t_type, GLuint stride, std::size_t offset) {
+        auto width = 0u;
         switch(t_type) {
             case VertexDataType::FLOAT:
             case VertexDataType::UNSIGNED_INT:
@@ -121,7 +118,7 @@ struct VertexBufferObject {
         GL_CHECK(glBufferData(static_cast<GLenum>(type), Size * sizeof(data[0]), &data[0], static_cast<GLenum>(draw_type)));
     }
 
-    void send_data_raw(const void* data, size_t size, const StorageType draw_type) const {
+    void send_data_raw(const void* data, GLsizei size, const StorageType draw_type) const {
         GL_CHECK(glBufferData(static_cast<GLenum>(type), size, data, static_cast<GLenum>(draw_type)));
     }
 
@@ -146,7 +143,7 @@ struct VertexBufferObject {
     const VertexBufferType type;
 };
 
-enum class VertexPrimitive {
+enum class VertexPrimitive : GLenum {
     TRIANGLES = GL_TRIANGLES,
     TRIANGLE_STRIP = GL_TRIANGLE_STRIP,
     POINTS = GL_POINTS,
@@ -154,13 +151,13 @@ enum class VertexPrimitive {
 
 struct DrawArrays {
     VertexPrimitive primitive;
-    std::size_t first;
-    std::size_t count;
+    GLuint first;
+    GLsizei count;
 };
 
 struct DrawElements {
     VertexPrimitive primitive;
-    std::size_t count;
+    GLsizei count;
     VertexDataType type;
     Indices& indices;
 };
