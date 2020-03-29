@@ -46,14 +46,14 @@ public:
         auto vao_triangles = VertexArrayObject();
         auto vbo_triangles = VertexBufferObject(VertexBufferType::ARRAY);
 
-        vao_triangles.bind();
-        vbo_triangles.bind();
+        // vao_triangles.bind();
+        // vbo_triangles.bind();
 
-        vbo_triangles.send_data_raw(nullptr, 100 * sizeof(glm::vec3), StorageType::DYNAMIC);
+        // vbo_triangles.send_data_raw(nullptr, 100 * sizeof(glm::vec3), StorageType::DYNAMIC);
 
-        vbo_triangles.enable_attribute_pointer(0, 3, VertexDataType::FLOAT, 3, 0);
+        // vbo_triangles.enable_attribute_pointer(0, 3, VertexDataType::FLOAT, 3, 0);
         
-        vao_triangles.unbind();
+        // vao_triangles.unbind();
 
         return std::make_shared<Particles>(std::move(vao), std::move(vbo), std::move(vao_triangles), std::move(vbo_triangles), amount);
     }

@@ -7,7 +7,9 @@
 #include <type_traits>
 #include <utility>
 #include <filesystem>
-namespace fs = std::filesystem;
+
+#include "drawable.hpp"
+
 #include "glad/glad.h"
 #include "glm/mat4x4.hpp"
 

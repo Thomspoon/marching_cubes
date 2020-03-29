@@ -40,7 +40,9 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
+#ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 #include <GLFW/glfw3native.h>
 
 #define GLFW_HAS_WINDOW_TOPMOST       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
