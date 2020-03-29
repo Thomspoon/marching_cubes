@@ -106,7 +106,6 @@ struct VertexBufferObject {
 
     void bind() const {
         GL_CHECK(glBindBuffer(static_cast<GLenum>(type), vbo));
-        std::cout << "Binding: " << vbo << std::endl;
     }
 
     template<typename Type>

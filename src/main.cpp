@@ -22,7 +22,7 @@ constexpr auto WINDOW_WIDTH = 1440;
 constexpr auto WINDOW_HEIGHT = 900;
 
 auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 1000.0f);
-auto camera = Camera<Perspective>(camera_settings, glm::vec3(5.0f, 5.0f, 5.0f), glm::vec3(0.0f, 1.0f, 0.0f), 110.0f, -15.0f);
+auto camera = Camera<Perspective>(camera_settings, glm::vec3(-5.0f, 0.0f, -10.0f), glm::vec3(0.0f, 1.0f, 0.0f), 60.0, 0.0f);
 
 Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
 
@@ -114,9 +114,9 @@ int main() try {
     ImGui::StyleColorsDark();
 
     ImGui_ImplGlfw_InitForOpenGL(window.get_window(), true);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplOpenGL3_Init("#version 450");
 
-    float sea_level = -0.5;
+    GenerationSettings settings;
 
     while (!window.should_close())
     {
@@ -136,14 +136,18 @@ int main() try {
         auto view = camera.get_view_matrix();
         auto projection = camera.get_projection();
 
-        particles->update(sea_level);
-        particles->draw(view, projection);
+        particles->update(settings);
+        particles->draw(view, projection, settings);
 
         ImGui::Begin("Procedural Generation Renderer");
 
         ImGui::Text("Edit Configuration Parameters");
 
-        ImGui::SliderFloat("sea_level", &sea_level, -0.4f, 0.1f);
+        ImGui::SliderFloat("Scale:       ", &settings.scale, 0.0f, 5.0f);
+        ImGui::SliderFloat("Persistence: ", &settings.persistence, 0.0f, 1.0f);
+        ImGui::SliderFloat("Lacunarity:  ", &settings.lacunarity, 0.0f, 5.0f);
+        ImGui::SliderInt("Octaves:     ", &settings.octaves, 0, 10);
+        ImGui::SliderFloat("Iso Level:   ", &settings.iso_level, 0.0f, 2.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 

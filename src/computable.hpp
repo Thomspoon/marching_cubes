@@ -112,8 +112,6 @@ struct ShaderStorageBuffer {
             return nullptr;
         }
 
-        std::cout << "Offset: " << offset << ", " << length << std::endl;
-
         GL_CHECK(glBindBufferBase(InternalBufferType, _index, _ssb));
         auto *buffer = GL_CHECK(glMapBufferRange(
             InternalBufferType,
