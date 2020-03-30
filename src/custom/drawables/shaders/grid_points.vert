@@ -13,7 +13,7 @@ out float v_iso_level;
 void main()
 {
     vec3 delta1 = abs(a_pos.xyz - vec3(0.0, 0.0, 0.0)); // Get delta from middle vec3
-    vec3 delta2 = abs(a_pos.xyz - vec3(0.0, 1.0, 0.0)); // Get delta from middle vec3
+    vec3 delta2 = abs(a_pos.xyz - vec3(1.0, 1.0, 0.0)); // Get delta from middle vec3
 
     // Color origin light red
     v_origin_offset = 1.0f;

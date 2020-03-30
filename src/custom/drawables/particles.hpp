@@ -53,7 +53,7 @@ public:
         vao_triangles.bind();
         vbo_triangles.bind();
 
-        vbo_triangles.send_data_raw(nullptr, 10000 * sizeof(glm::vec3), StorageType::DYNAMIC);
+        vbo_triangles.send_data_raw(nullptr, 4 * sizeof(Triangle), StorageType::DYNAMIC);
 
         vbo_triangles.enable_attribute_pointer(0, 3, VertexDataType::FLOAT, 3, 0);
 
@@ -81,7 +81,7 @@ public:
                 _shader_triangles.set_mat4("projection", projection);
                 _shader_triangles.set_mat4("view", view);
                 _shader_triangles.set_mat4("model", glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 0.0f, 0.0f)));
-                glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 3);
+                glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 9);
                 _vao_triangles.unbind();
 
                 std::cout << "Drawing " << _amount << " points and " << _amount_triangles << " triangles!" << std::endl;
@@ -100,20 +100,43 @@ public:
             return;
         }
 
-        auto index = 0u;
-        auto cube_index = 0u;
+        // Print point noise values
+        glm::vec4 (*point)[2][2][2] = reinterpret_cast<glm::vec4(*)[2][2][2]>(data);
         for(auto i = 0u; i < 2; i++) {
             for(auto j = 0u; j < 2; j++) {
                 for(auto k = 0u; k < 2; k++) {
-                    glm::vec4 (*point)[2][2][2] = reinterpret_cast<glm::vec4(*)[2][2][2]>(data);
-                    std::cout << "Point  " << "(" << i << ", " << j << ", " << k << "): ";
+                    
+                    std::cout << "Point  " << "(" << (*point)[i][j][k].x << ", " << (*point)[i][j][k].y << ", " << (*point)[i][j][k].z << "): ";
                     std::cout << (*point)[i][j][k].w << std::endl;
-                    if((*point)[i][j][k].w < settings.iso_level) {
-                        cube_index |= (1 << index);
-                    }
-                    index++;
                 }
             }
+        }
+
+        // Calculate cube_index
+        auto cube_index = 0u;
+        if((*point)[0][0][0].w < settings.iso_level) {
+            cube_index |= 1;
+        }
+        if((*point)[1][0][0].w < settings.iso_level) {
+            cube_index |= (1 << 1);
+        }
+        if((*point)[1][0][1].w < settings.iso_level) {
+            cube_index |= (1 << 2);
+        }
+        if((*point)[0][0][1].w < settings.iso_level) {
+            cube_index |= (1 << 3);
+        }
+        if((*point)[0][1][0].w < settings.iso_level) {
+            cube_index |= (1 << 4);
+        }
+        if((*point)[1][1][0].w < settings.iso_level) {
+            cube_index |= (1 << 5);
+        }
+        if((*point)[1][1][1].w < settings.iso_level) {
+            cube_index |= (1 << 6);
+        }
+        if((*point)[0][1][1].w < settings.iso_level) {
+            cube_index |= (1 << 7);
         }
 
         std::cout << "cube_index: " << cube_index << std::endl;
@@ -126,21 +149,35 @@ public:
 
         _marching_cubes->close_points_buffer();
 
-        Triangle *triangles = _marching_cubes->expose_triangle_buffer();
-        if(data == nullptr) {
+        float *triangles = reinterpret_cast<float *>(_marching_cubes->expose_triangle_buffer());
+        if(triangles == nullptr) {
             return;
         }
 
         auto num_triangles = _marching_cubes->num_triangles();
         _amount_triangles = num_triangles;
 
-        for(auto i = 0u; i < num_triangles; i++) {
-            std::cout << "Triangle " << i << ": " << std::endl;
-            std::cout << "(" << triangles[i].vertexA.x << ", " << triangles[i].vertexA.y << ", " << triangles[i].vertexA.z << ") ";
-            std::cout << "(" << triangles[i].vertexB.x << ", " << triangles[i].vertexB.y << ", " << triangles[i].vertexB.z << ") ";
-            std::cout << "(" << triangles[i].vertexC.x << ", " << triangles[i].vertexC.y << ", " << triangles[i].vertexC.z << ")";
-            std::cout << std::endl;
+        // for(auto i = 0u; i < num_triangles; i++) {
+        //     std::cout << "Triangle " << i << ": " << std::endl;
+        //     std::cout << "(" << triangles[i].vertexA.x << ", " << triangles[i].vertexA.y << ", " << triangles[i].vertexA.z << ") ";
+        //     std::cout << "(" << triangles[i].vertexB.x << ", " << triangles[i].vertexB.y << ", " << triangles[i].vertexB.z << ") ";
+        //     std::cout << "(" << triangles[i].vertexC.x << ", " << triangles[i].vertexC.y << ", " << triangles[i].vertexC.z << ")";
+        //     std::cout << std::endl;
+        // }
+
+        // Triangle *triangles = expose_triangle_buffer();
+        // if(triangles == nullptr) {
+        //     return;
+        // }
+
+        std::cout << "Triangle output: ";
+        for(auto i = 0u; i < num_triangles * 18; i++)
+        {
+            std::cout << triangles[i] << ", ";
         }
+        std::cout << std::endl;
+
+        std::cout << "Copying " << num_triangles << " triangles!" << std::endl;
 
         if(num_triangles == 0) {
             return;
@@ -149,7 +186,7 @@ public:
         // Send updated data to buffer
         _vao_triangles.bind();
         _vbo_triangles.bind();
-        _vbo_triangles.send_data_raw(triangles, _amount_triangles * sizeof(Triangle), StorageType::DYNAMIC);
+        _vbo_triangles.update_data_raw(triangles, 36);
         _vao_triangles.unbind();
 
         _marching_cubes->close_triangle_buffer();

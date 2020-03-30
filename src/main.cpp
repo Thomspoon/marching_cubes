@@ -22,7 +22,7 @@ constexpr auto WINDOW_WIDTH = 1440;
 constexpr auto WINDOW_HEIGHT = 900;
 
 auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 1000.0f);
-auto camera = Camera<Perspective>(camera_settings, glm::vec3(-5.0f, 0.0f, -10.0f), glm::vec3(0.0f, 1.0f, 0.0f), 60.0, 0.0f);
+auto camera = Camera<Perspective>(camera_settings, glm::vec3(-3.0f, 3.0f, -10.0f), glm::vec3(0.0f, 1.0f, 0.0f), 70.0, -10.0f);
 
 Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
 
@@ -142,6 +142,8 @@ int main() try {
         ImGui::Begin("Procedural Generation Renderer");
 
         ImGui::Text("Edit Configuration Parameters");
+
+        settings.iso_level = 1.561f;
 
         ImGui::SliderFloat("Scale:       ", &settings.scale, 0.0f, 5.0f);
         ImGui::SliderFloat("Persistence: ", &settings.persistence, 0.0f, 1.0f);

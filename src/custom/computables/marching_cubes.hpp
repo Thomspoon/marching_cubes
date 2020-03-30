@@ -19,9 +19,9 @@ struct GenerationSettings
 };
 
 struct Triangle {
-    glm::vec3 vertexC;
-    glm::vec3 vertexB;
     glm::vec3 vertexA;
+    glm::vec3 vertexB;
+    glm::vec3 vertexC;
 };
 
 static int edges[256]={
@@ -266,7 +266,7 @@ static int triangulation[256][16] =
     {9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2, -1, -1, -1, -1},
     {9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2, -1},
     {1, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
-    {0, 8, 7, 0, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1},
+    {0, 8, 7, -1, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1}, //TODO FIX -1 -> 0
     {9, 0, 3, 9, 3, 5, 5, 3, 7, -1, -1, -1, -1, -1, -1, -1},
     {9, 8, 7, 5, 9, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
     {5, 8, 4, 5, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1},
@@ -325,7 +325,7 @@ public:
         ShaderStorageBuffer<glm::vec4>&& ssbo, 
         ShaderStorageBuffer<Triangle>&& ssbo_triangles, 
         ShaderStorageBuffer<int>&& ssbo_triangulation,
-        ShaderStorageBuffer<int>&& ssbo_edges,
+        ShaderStorageBuffer<float>&& ssbo_edges,
         AtomicBufferObject&& asb_num_triangles,
         size_t num_components
     ) 
@@ -366,13 +366,13 @@ public:
         memcpy(triangulation_buffer, triangulation, sizeof(triangulation));
         ssbo_triangulation.unmap_buffer();
 
-        auto ssbo_edges = ShaderStorageBuffer<int>(3);
-        ssbo_edges.reserve_storage(sizeof(edges), StorageType::STATIC);
+        auto ssbo_edges = ShaderStorageBuffer<float>(3);
+        ssbo_edges.reserve_storage(100 * sizeof(float), StorageType::STATIC);
 
-        auto edges_buffer = ssbo_edges.map_buffer(BufferIntent::WRITE);
-        assert(edges_buffer != nullptr);
-        memcpy(edges_buffer, edges, sizeof(edges));
-        ssbo_edges.unmap_buffer();
+        // auto edges_buffer = ssbo_edges.map_buffer(BufferIntent::WRITE);
+        // assert(edges_buffer != nullptr);
+        // memcpy(edges_buffer, edges, sizeof(edges));
+        // ssbo_edges.unmap_buffer();
 
         auto asb_num_triangles = AtomicBufferObject(0);
         asb_num_triangles.reserve_storage(sizeof(GLuint), StorageType::DYNAMIC);
@@ -411,6 +411,24 @@ public:
         num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
         _num_triangles = *reinterpret_cast<GLuint*>(num_triangles);
         _num_triangles_buffer.unmap_buffer();
+
+        // Triangle *triangles = expose_triangle_buffer();
+        // if(triangles == nullptr) {
+        //     return;
+        // }
+
+        // std::cout << "Triangle output: " << std::endl;
+        // auto count = 0u;
+        // for(auto i = 0u; i < _num_triangles; i++)
+        // {
+        //     std::cout << triangles[i].vertexA.x << ", " << triangles[i].vertexA.y << ", " << triangles[i].vertexA.z << std::endl;
+        //     std::cout << triangles[i].vertexB.x << ", " << triangles[i].vertexB.y << ", " << triangles[i].vertexB.z << std::endl;
+        //     std::cout << triangles[i].vertexC.x << ", " << triangles[i].vertexC.y << ", " << triangles[i].vertexC.z << std::endl;
+        // }
+        // std::cout << std::endl;
+
+
+        // close_triangle_buffer();
     }
 
     GLuint num_triangles() const {
@@ -418,7 +436,7 @@ public:
     }
 
     Triangle* expose_triangle_buffer() const {
-        return _triangles.map_buffer_range(0, _num_triangles, BufferIntentRange::READ);
+        return _triangles.map_buffer_range(0, _num_triangles * sizeof(Triangle), BufferIntentRange::READ);
     }
 
     void close_triangle_buffer() const {
@@ -436,7 +454,7 @@ public:
 private:
     ShaderStorageBuffer<Triangle> _triangles;
     ShaderStorageBuffer<int> _triangulation;
-    ShaderStorageBuffer<int> _edges;
+    ShaderStorageBuffer<float> _edges;
     AtomicBufferObject _num_triangles_buffer;
 
     Shader _shader_stage1;

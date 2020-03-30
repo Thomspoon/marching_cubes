@@ -110,7 +110,7 @@ layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
 layout (std430, binding = 0) buffer Pos
 {
-    vec4[8] Grid;
+    vec4[2][2][2] Grid;
 };
 
 uniform float scale;
@@ -118,10 +118,6 @@ uniform float persistence;
 uniform int octaves;
 uniform int axis_length;
 uniform float lacunarity;
-
-uint index_from_coord(uint x, uint y, uint z) {
-    return x * axis_length * axis_length + y * axis_length + z;
-}
 
 void main()
 {
@@ -168,7 +164,5 @@ void main()
         frequency *= lacunarity;
     }
 
-    Grid[index_from_coord(gid.x, gid.y, gid.z)] = vec4(pos, noise);
-
-    memoryBarrier();
+    Grid[gid.x][gid.y][gid.z] = vec4(pos, noise);
 }

@@ -2,6 +2,36 @@
 
 #version 450 core
 
+int corner_index_a_from_edge[12] = {
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    0,
+    1,
+    2,
+    3
+};
+
+int corner_index_b_from_edge[12] = {
+    1,
+    2,
+    3,
+    0,
+    5,
+    6,
+    7,
+    4,
+    4,
+    5,
+    6,
+    7
+};
+
 layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
 struct Triangle {
@@ -12,7 +42,7 @@ struct Triangle {
 
 layout (std430, binding = 0) buffer Pos
 {
-    vec4[8] points;
+    vec4[2][2][2] points;
 };
 
 layout (std430, binding = 1) buffer TriangleBuffer
@@ -27,14 +57,14 @@ layout (std430, binding = 2) buffer Triangulation
 
 layout (std430, binding = 3) buffer Edges
 {
-    int edges[256];
+    float edges[100];
 };
 
 layout(binding = 0) uniform atomic_uint num_triangles;
 uniform int axis_length;
 uniform float iso_level;
 
-vec3 vertex_interpolate(float iso_level, vec4 p1, vec4 p2)
+vec3 vertex_interpolate(vec4 p1, vec4 p2)
 {
    float mu = (iso_level - p1.w) / (p2.w - p1.w);
 
@@ -49,8 +79,6 @@ void main()
 {
     ivec3 gid = ivec3(gl_GlobalInvocationID.xyz);
 
-    vec3 vertex_list[12];
-
     // Stop one point before the end because voxel includes neighbouring points
     if (gid.x >= axis_length-1 || gid.y >= axis_length-1 || gid.z >= axis_length-1) {
         return;
@@ -58,14 +86,14 @@ void main()
 
     // 8 corners of the current cube
     vec4 cube_corners[8] = {
-        points[index_from_coord(gid.x, gid.y, gid.z)],
-        points[index_from_coord(gid.x + 1, gid.y, gid.z)],
-        points[index_from_coord(gid.x + 1, gid.y, gid.z + 1)],
-        points[index_from_coord(gid.x, gid.y, gid.z + 1)],
-        points[index_from_coord(gid.x, gid.y + 1, gid.z)],
-        points[index_from_coord(gid.x + 1, gid.y + 1, gid.z)],
-        points[index_from_coord(gid.x + 1, gid.y + 1, gid.z + 1)],
-        points[index_from_coord(gid.x, gid.y + 1, gid.z + 1)]
+        vec4(0.0, 0.0, 0.0, 0.41),// points[gid.x    ][gid.y    ][gid.z    ],
+        vec4(1.0, 0.0, 0.0, 1.82),// points[gid.x + 1][gid.y    ][gid.z    ],
+        vec4(1.0, 0.0, 1.0, 1.41),// points[gid.x + 1][gid.y    ][gid.z + 1],
+        vec4(0.0, 0.0, 1.0, 1.38),// points[gid.x    ][gid.y    ][gid.z + 1],
+        vec4(0.0, 1.0, 0.0, 1.82),// points[gid.x    ][gid.y + 1][gid.z    ],
+        vec4(1.0, 1.0, 0.0, 1.77),// points[gid.x + 1][gid.y + 1][gid.z    ],
+        vec4(1.0, 1.0, 1.0, 0.35),// points[gid.x + 1][gid.y + 1][gid.z + 1],
+        vec4(0.0, 1.0, 1.0, 1.41),// points[gid.x    ][gid.y + 1][gid.z + 1]
     };
 
     // Calculate unique index for each cube configuration.
@@ -82,46 +110,54 @@ void main()
     if (cube_corners[7].w < iso_level) cube_index |= 128;
 
     // Return early if cube is not visible
-    if(edges[cube_index] == 0) {
+    if(cube_index == 0 || cube_index == 255) {
         return;
     }
 
-   /* Find the vertices where the surface intersects the cube */
-   if (bool(edges[cube_index] & 1))
-      vertex_list[0] = vertex_interpolate(iso_level, cube_corners[0], cube_corners[1]);
-   if (bool(edges[cube_index] & 2))
-      vertex_list[1] = vertex_interpolate(iso_level, cube_corners[1], cube_corners[2]);
-   if (bool(edges[cube_index] & 4))
-      vertex_list[2] = vertex_interpolate(iso_level, cube_corners[2], cube_corners[3]);
-   if (bool(edges[cube_index] & 8))
-      vertex_list[3] = vertex_interpolate(iso_level, cube_corners[3], cube_corners[0]);
-   if (bool(edges[cube_index] & 16))
-      vertex_list[4] = vertex_interpolate(iso_level, cube_corners[4], cube_corners[5]);
-   if (bool(edges[cube_index] & 32))
-      vertex_list[5] = vertex_interpolate(iso_level, cube_corners[5], cube_corners[6]);
-   if (bool(edges[cube_index] & 64))
-      vertex_list[6] = vertex_interpolate(iso_level, cube_corners[6], cube_corners[7]);
-   if (bool(edges[cube_index] & 128))
-      vertex_list[7] = vertex_interpolate(iso_level, cube_corners[7], cube_corners[4]);
-   if (bool(edges[cube_index] & 256))
-      vertex_list[8] = vertex_interpolate(iso_level, cube_corners[0], cube_corners[4]);
-   if (bool(edges[cube_index] & 512))
-      vertex_list[9] = vertex_interpolate(iso_level, cube_corners[1], cube_corners[5]);
-   if (bool(edges[cube_index] & 1024))
-      vertex_list[10] = vertex_interpolate(iso_level, cube_corners[2], cube_corners[6]);
-   if (bool(edges[cube_index] & 2048))
-      vertex_list[11] = vertex_interpolate(iso_level, cube_corners[3], cube_corners[7]);
-
     // Create triangles for current cube configuration
     for (int i = 0; triangulation[cube_index][i] != -1; i +=3) {
+        int a0 = corner_index_a_from_edge[triangulation[cube_index][i]];
+        int b0 = corner_index_b_from_edge[triangulation[cube_index][i]];
+
+        int a1 = corner_index_a_from_edge[triangulation[cube_index][i+1]];
+        int b1 = corner_index_b_from_edge[triangulation[cube_index][i+1]];
+
+        int a2 = corner_index_a_from_edge[triangulation[cube_index][i+2]];
+        int b2 = corner_index_b_from_edge[triangulation[cube_index][i+2]];
+
+        // edges[i] = cube_corners[a0].x;
+        // edges[i+1] = cube_corners[a0].y;
+        // edges[i+2] = cube_corners[a0].z;
+
+        // edges[i+3] = cube_corners[b0].x;
+        // edges[i+4] = cube_corners[b0].y;
+        // edges[i+5] = cube_corners[b0].z;
+
+        // edges[i+6] = cube_corners[a1].x;
+        // edges[i+7] = cube_corners[a1].y;
+        // edges[i+8] = cube_corners[a1].z;
+
+        // edges[i+9] = cube_corners[b1].x;
+        // edges[i+10] = cube_corners[b1].y;
+        // edges[i+11] = cube_corners[b1].z;
+
+        // edges[i+12] = cube_corners[a2].x;
+        // edges[i+13] = cube_corners[a2].y;
+        // edges[i+14] = cube_corners[a2].z;
+
+        // edges[i+15] = cube_corners[b2].x;
+        // edges[i+16] = cube_corners[b2].y;
+        // edges[i+17] = cube_corners[b2].z;
+
         Triangle tri;
-        tri.vertex_a = vertex_list[triangulation[cube_index][i    ]];
-        tri.vertex_b = vertex_list[triangulation[cube_index][i + 1]];
-        tri.vertex_c = vertex_list[triangulation[cube_index][i + 2]];
+        tri.vertex_a = vec3(float(cube_corners[a0].x + cube_corners[b0].x)/2.0f, float(cube_corners[a0].y + cube_corners[b0].y)/2.0f, float(cube_corners[a0].z + cube_corners[b0].z)/2.0f);//vertex_interpolate(cube_corners[a0], cube_corners[b0]);
+        tri.vertex_b = vec3(float(cube_corners[a1].x + cube_corners[b1].x)/2.0f, float(cube_corners[a1].y + cube_corners[b1].y)/2.0f, float(cube_corners[a1].z + cube_corners[b1].z)/2.0f);//vertex_interpolate(cube_corners[a1], cube_corners[b1]);
+        tri.vertex_c = vec3(float(cube_corners[a2].x + cube_corners[b2].x)/2.0f, float(cube_corners[a2].y + cube_corners[b2].y)/2.0f, float(cube_corners[a2].z + cube_corners[b2].z)/2.0f);//vertex_interpolate(cube_corners[a2], cube_corners[b2]);
+
         triangles[atomicCounter(num_triangles)] = tri;
 
-        memoryBarrier();
-
         atomicCounterIncrement(num_triangles);
+
+        memoryBarrier();
     }
 }
