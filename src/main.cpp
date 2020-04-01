@@ -27,11 +27,14 @@ auto camera = Camera<Perspective>(camera_settings, glm::vec3(-3.0f, 3.0f, -10.0f
 Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
 
 bool focus = true;
+bool draw_points = true;
 
 // custom callback 
 void process_input(float delta_time)
 {
     using namespace Keyboard;
+
+    static auto debounce = 0u;
 
     if(window.get_key(Key::KEY_ESCAPE) == KeyState::PRESSED) {
         focus = false;
@@ -60,6 +63,10 @@ void process_input(float delta_time)
 
     if(window.get_key(Key::KEY_E) == KeyState::PRESSED) {
         window.polygon_mode(PolygonMode::LINE);
+    }
+
+    if(window.get_key(Key::KEY_P) == KeyState::PRESSED) {
+        draw_points = !draw_points;
     }
 }
 
@@ -100,7 +107,7 @@ int main() try {
     window.enable_capability(Capability::DEPTH_TEST);
     window.enable_capability(Capability::PROGRAM_POINT_SIZE);
 
-    auto number_of_components = 8;
+    auto number_of_components = 4096;
     auto particles = Particles::create(number_of_components);
 
     auto delta_time = 0.0f;
@@ -117,6 +124,8 @@ int main() try {
     ImGui_ImplOpenGL3_Init("#version 450");
 
     GenerationSettings settings;
+
+    settings.iso_level = 0.0f;
 
     while (!window.should_close())
     {
@@ -137,13 +146,11 @@ int main() try {
         auto projection = camera.get_projection();
 
         particles->update(settings);
-        particles->draw(view, projection, settings);
+        particles->draw(view, projection, settings, draw_points);
 
         ImGui::Begin("Procedural Generation Renderer");
 
         ImGui::Text("Edit Configuration Parameters");
-
-        settings.iso_level = 1.561f;
 
         ImGui::SliderFloat("Scale:       ", &settings.scale, 0.0f, 5.0f);
         ImGui::SliderFloat("Persistence: ", &settings.persistence, 0.0f, 1.0f);

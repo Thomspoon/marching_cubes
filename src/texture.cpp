@@ -1,5 +1,5 @@
 #include "texture.hpp"
-#include "drawable.hpp"
+#include "utility.hpp"
 
 #include <cassert>
 

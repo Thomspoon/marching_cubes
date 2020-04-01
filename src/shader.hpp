@@ -8,7 +8,7 @@
 #include <utility>
 #include <filesystem>
 
-#include "drawable.hpp"
+#include "utility.hpp"
 
 #include "glad/glad.h"
 #include "glm/mat4x4.hpp"

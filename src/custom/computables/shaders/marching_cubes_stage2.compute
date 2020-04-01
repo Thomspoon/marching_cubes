@@ -35,14 +35,14 @@ int corner_index_b_from_edge[12] = {
 layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
 struct Triangle {
-    vec3 vertex_a;
-    vec3 vertex_b;
-    vec3 vertex_c;
+    vec4 vertex_a;
+    vec4 vertex_b;
+    vec4 vertex_c;
 };
 
 layout (std430, binding = 0) buffer Pos
 {
-    vec4[2][2][2] points;
+    vec4[16][16][16] points;
 };
 
 layout (std430, binding = 1) buffer TriangleBuffer
@@ -55,9 +55,9 @@ layout (std430, binding = 2) buffer Triangulation
     int triangulation[256][16];
 };
 
-layout (std430, binding = 3) buffer Edges
+layout (std430, binding = 3) buffer Scratch
 {
-    float edges[100];
+    float scratch[1000];
 };
 
 layout(binding = 0) uniform atomic_uint num_triangles;
@@ -86,14 +86,14 @@ void main()
 
     // 8 corners of the current cube
     vec4 cube_corners[8] = {
-        vec4(0.0, 0.0, 0.0, 0.41),// points[gid.x    ][gid.y    ][gid.z    ],
-        vec4(1.0, 0.0, 0.0, 1.82),// points[gid.x + 1][gid.y    ][gid.z    ],
-        vec4(1.0, 0.0, 1.0, 1.41),// points[gid.x + 1][gid.y    ][gid.z + 1],
-        vec4(0.0, 0.0, 1.0, 1.38),// points[gid.x    ][gid.y    ][gid.z + 1],
-        vec4(0.0, 1.0, 0.0, 1.82),// points[gid.x    ][gid.y + 1][gid.z    ],
-        vec4(1.0, 1.0, 0.0, 1.77),// points[gid.x + 1][gid.y + 1][gid.z    ],
-        vec4(1.0, 1.0, 1.0, 0.35),// points[gid.x + 1][gid.y + 1][gid.z + 1],
-        vec4(0.0, 1.0, 1.0, 1.41),// points[gid.x    ][gid.y + 1][gid.z + 1]
+        points[gid.x    ][gid.y    ][gid.z    ],
+        points[gid.x + 1][gid.y    ][gid.z    ],
+        points[gid.x + 1][gid.y    ][gid.z + 1],
+        points[gid.x    ][gid.y    ][gid.z + 1],
+        points[gid.x    ][gid.y + 1][gid.z    ],
+        points[gid.x + 1][gid.y + 1][gid.z    ],
+        points[gid.x + 1][gid.y + 1][gid.z + 1],
+        points[gid.x    ][gid.y + 1][gid.z + 1]
     };
 
     // Calculate unique index for each cube configuration.
@@ -125,38 +125,31 @@ void main()
         int a2 = corner_index_a_from_edge[triangulation[cube_index][i+2]];
         int b2 = corner_index_b_from_edge[triangulation[cube_index][i+2]];
 
-        // edges[i] = cube_corners[a0].x;
-        // edges[i+1] = cube_corners[a0].y;
-        // edges[i+2] = cube_corners[a0].z;
-
-        // edges[i+3] = cube_corners[b0].x;
-        // edges[i+4] = cube_corners[b0].y;
-        // edges[i+5] = cube_corners[b0].z;
-
-        // edges[i+6] = cube_corners[a1].x;
-        // edges[i+7] = cube_corners[a1].y;
-        // edges[i+8] = cube_corners[a1].z;
-
-        // edges[i+9] = cube_corners[b1].x;
-        // edges[i+10] = cube_corners[b1].y;
-        // edges[i+11] = cube_corners[b1].z;
-
-        // edges[i+12] = cube_corners[a2].x;
-        // edges[i+13] = cube_corners[a2].y;
-        // edges[i+14] = cube_corners[a2].z;
-
-        // edges[i+15] = cube_corners[b2].x;
-        // edges[i+16] = cube_corners[b2].y;
-        // edges[i+17] = cube_corners[b2].z;
-
         Triangle tri;
-        tri.vertex_a = vec3(float(cube_corners[a0].x + cube_corners[b0].x)/2.0f, float(cube_corners[a0].y + cube_corners[b0].y)/2.0f, float(cube_corners[a0].z + cube_corners[b0].z)/2.0f);//vertex_interpolate(cube_corners[a0], cube_corners[b0]);
-        tri.vertex_b = vec3(float(cube_corners[a1].x + cube_corners[b1].x)/2.0f, float(cube_corners[a1].y + cube_corners[b1].y)/2.0f, float(cube_corners[a1].z + cube_corners[b1].z)/2.0f);//vertex_interpolate(cube_corners[a1], cube_corners[b1]);
-        tri.vertex_c = vec3(float(cube_corners[a2].x + cube_corners[b2].x)/2.0f, float(cube_corners[a2].y + cube_corners[b2].y)/2.0f, float(cube_corners[a2].z + cube_corners[b2].z)/2.0f);//vertex_interpolate(cube_corners[a2], cube_corners[b2]);
 
-        triangles[atomicCounter(num_triangles)] = tri;
+        // No interpolation
+        // tri.vertex_a = vec4(float(cube_corners[a0].x + cube_corners[b0].x)/2.0f, float(cube_corners[a0].y + cube_corners[b0].y)/2.0f, float(cube_corners[a0].z + cube_corners[b0].z)/2.0f, 0.0f);//vertex_interpolate(cube_corners[a0], cube_corners[b0]);
+        // tri.vertex_b = vec4(float(cube_corners[a1].x + cube_corners[b1].x)/2.0f, float(cube_corners[a1].y + cube_corners[b1].y)/2.0f, float(cube_corners[a1].z + cube_corners[b1].z)/2.0f, 0.0f);//vertex_interpolate(cube_corners[a1], cube_corners[b1]);
+        // tri.vertex_c = vec4(float(cube_corners[a2].x + cube_corners[b2].x)/2.0f, float(cube_corners[a2].y + cube_corners[b2].y)/2.0f, float(cube_corners[a2].z + cube_corners[b2].z)/2.0f, 0.0f);//vertex_interpolate(cube_corners[a2], cube_corners[b2]);
 
-        atomicCounterIncrement(num_triangles);
+        tri.vertex_a = vec4(vertex_interpolate(cube_corners[a0], cube_corners[b0]), 0.0f);
+        tri.vertex_b = vec4(vertex_interpolate(cube_corners[a1], cube_corners[b1]), 0.0f);
+        tri.vertex_c = vec4(vertex_interpolate(cube_corners[a2], cube_corners[b2]), 0.0f);
+
+        int index = index_from_coord(gid.x, gid.y, gid.z) * 9;
+        scratch[index] = tri.vertex_a.x;
+        scratch[index+1] = tri.vertex_a.y;
+        scratch[index+2] = tri.vertex_a.z;
+
+        scratch[index+3] = tri.vertex_b.x;
+        scratch[index+4] = tri.vertex_b.y;
+        scratch[index+5] = tri.vertex_b.z;
+
+        scratch[index+6] = tri.vertex_c.x;
+        scratch[index+7] = tri.vertex_c.y;
+        scratch[index+8] = tri.vertex_c.z;
+
+        triangles[atomicCounterIncrement(num_triangles)] = tri;
 
         memoryBarrier();
     }

@@ -30,6 +30,6 @@ void main()
     }
 
     v_iso_level = a_pos.w;
-    gl_PointSize = 4.0f;
+    gl_PointSize = 2.0f;
     gl_Position = projection * view * model * vec4(a_pos.xyz, 1.0f);
 }
