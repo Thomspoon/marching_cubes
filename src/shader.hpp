@@ -106,6 +106,7 @@ public:
     void set_float(const char *name, float value) const;
     void set_vec2(const char *name, const glm::vec2 &value) const;
     void set_vec3(const char *name, const glm::vec3 &value) const;
+    void set_ivec3(const char *name, const glm::ivec3 &value) const;
     void set_vec4(const char *name, const glm::vec4 &value) const;
     void set_mat2(const char *name, const glm::mat2 &mat) const;
     void set_mat3(const char *name, const glm::mat3 &mat) const;

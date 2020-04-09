@@ -135,6 +135,22 @@ void Shader::set_vec3(const char *name, const glm::vec3 &value) const
     GL_CHECK(glUniform3fv(variable, 1, &value[0])); 
 }
 
+void Shader::set_ivec3(const char *name, const glm::ivec3 &value) const
+{ 
+    auto variable = glGetUniformLocation(m_program, name);
+
+#ifdef __DEBUG__
+    if(variable == -1) {
+        std::stringstream error;
+        error << "Unknown_variable: ";
+        error << name;
+        throw std::runtime_error(error.str().c_str());
+    }
+#endif
+
+    GL_CHECK(glUniform3iv(variable, 1, &value[0])); 
+}
+
 void Shader::set_vec4(const char *name, const glm::vec4 &value) const
 { 
     auto variable = glGetUniformLocation(m_program, name);

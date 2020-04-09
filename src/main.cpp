@@ -7,10 +7,7 @@
 #include "shader.hpp"
 #include "window.hpp"
 
-#include "custom/drawables/cube.hpp"
-#include "custom/computables/marching_cubes.hpp"
-#include "custom/drawables/particles.hpp"
-
+#include "custom/drawables/terrain_chunk.hpp"
 
 #include "glm/glm.hpp"
 #include "imgui.h"
@@ -33,8 +30,6 @@ bool draw_points = true;
 void process_input(float delta_time)
 {
     using namespace Keyboard;
-
-    static auto debounce = 0u;
 
     if(window.get_key(Key::KEY_ESCAPE) == KeyState::PRESSED) {
         focus = false;
@@ -107,8 +102,21 @@ int main() try {
     window.enable_capability(Capability::DEPTH_TEST);
     window.enable_capability(Capability::PROGRAM_POINT_SIZE);
 
-    auto number_of_components = 4096;
-    auto particles = Particles::create(number_of_components);
+    // Only use valid cubed integers
+    auto const number_of_components = 4096;
+    auto const axis_length = std::cbrt(number_of_components);
+
+    auto const num_chunks_per_axis = 1;
+
+    std::vector<std::shared_ptr<TerrainChunk>> chunks;//(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
+    for(auto i = 0; i < num_chunks_per_axis; i++) {
+        // for(auto j = 0; j < num_chunks_per_axis; j++) {
+        //     for(auto k = 0; k < num_chunks_per_axis; k++) {
+                //chunks.push_back(std::move(TerrainChunk::create(number_of_components, glm::ivec3(i * axis_length, j * axis_length, k * axis_length))));
+                chunks.push_back(std::move(TerrainChunk::create(number_of_components, glm::ivec3(0, 0, 0))));
+        //     }
+        // }
+    }
 
     auto delta_time = 0.0f;
     auto last_frame = 0.0f;
@@ -123,7 +131,7 @@ int main() try {
     ImGui_ImplGlfw_InitForOpenGL(window.get_window(), true);
     ImGui_ImplOpenGL3_Init("#version 450");
 
-    GenerationSettings settings;
+    GenerationSettings settings, last_settings;
 
     settings.iso_level = 0.0f;
 
@@ -145,8 +153,10 @@ int main() try {
         auto view = camera.get_view_matrix();
         auto projection = camera.get_projection();
 
-        particles->update(settings);
-        particles->draw(view, projection, settings, draw_points);
+        for(auto& chunk : chunks) {
+            chunk->update(settings);
+            chunk->draw(view, projection, settings, draw_points);
+        }
 
         ImGui::Begin("Procedural Generation Renderer");
 

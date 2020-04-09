@@ -242,14 +242,9 @@ struct VertexBufferObject {
 
         auto size_sent = 0u;
 
-        std::cout << "Sending " << size << " bytes in " << std::ceil(size / CHUNK_MAX_SIZE) << " chunks" << std::endl; 
-
         auto chunk_number = 1u;
         while(size_sent < size) {
             auto chunk_size = ((size - size_sent) > CHUNK_MAX_SIZE) ? CHUNK_MAX_SIZE : size - size_sent;
-
-            std::cout << "   Chunk #" << chunk_number << " sending " << chunk_size << " bytes!" << std::endl;
-
             auto chunk = ssbo.map_buffer_range(size_sent, chunk_size, BufferIntentRange::READ);
             map_buffer_range(chunk, size_sent, chunk_size);
             ssbo.unmap_buffer();

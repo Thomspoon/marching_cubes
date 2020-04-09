@@ -4,6 +4,12 @@
 
 #include <glad/glad.h>
 
+#include <string>
+
+#ifdef _WIN32
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
+
 // This is a convenience define that will check for errors after each hidden
 // opengl call, and if API_DUMP is defined, it will also log gl calls 
 // to stdout

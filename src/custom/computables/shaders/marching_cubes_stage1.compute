@@ -118,6 +118,7 @@ uniform float persistence;
 uniform int octaves;
 uniform int axis_length;
 uniform float lacunarity;
+uniform ivec3 offset;
 
 void main()
 {
@@ -132,7 +133,7 @@ void main()
     float noise = 0;
 
     // Offset so we can create more than one cube
-    vec3 pos = gid;
+    vec3 pos = gid + offset;
 
     // TODO: Turn this into a uniform buffer so we can have seeded RNG
     vec3 offsets[10] = {

@@ -109,10 +109,7 @@ void main()
     if (cube_corners[6].w < iso_level) cube_index |= 64;
     if (cube_corners[7].w < iso_level) cube_index |= 128;
 
-    // Return early if cube is not visible
-    if(cube_index == 0 || cube_index == 255) {
-        return;
-    }
+    if(cube_index == 0 || cube_index == 255) return;
 
     // Create triangles for current cube configuration
     for (int i = 0; triangulation[cube_index][i] != -1; i +=3) {
@@ -136,21 +133,21 @@ void main()
         tri.vertex_b = vec4(vertex_interpolate(cube_corners[a1], cube_corners[b1]), 0.0f);
         tri.vertex_c = vec4(vertex_interpolate(cube_corners[a2], cube_corners[b2]), 0.0f);
 
-        int index = index_from_coord(gid.x, gid.y, gid.z) * 9;
-        scratch[index] = tri.vertex_a.x;
-        scratch[index+1] = tri.vertex_a.y;
-        scratch[index+2] = tri.vertex_a.z;
+        // int index = index_from_coord(gid.x, gid.y, gid.z) * 9;
+        // scratch[index] = tri.vertex_a.x;
+        // scratch[index+1] = tri.vertex_a.y;
+        // scratch[index+2] = tri.vertex_a.z;
 
-        scratch[index+3] = tri.vertex_b.x;
-        scratch[index+4] = tri.vertex_b.y;
-        scratch[index+5] = tri.vertex_b.z;
+        // scratch[index+3] = tri.vertex_b.x;
+        // scratch[index+4] = tri.vertex_b.y;
+        // scratch[index+5] = tri.vertex_b.z;
 
-        scratch[index+6] = tri.vertex_c.x;
-        scratch[index+7] = tri.vertex_c.y;
-        scratch[index+8] = tri.vertex_c.z;
+        // scratch[index+6] = tri.vertex_c.x;
+        // scratch[index+7] = tri.vertex_c.y;
+        // scratch[index+8] = tri.vertex_c.z;
 
         triangles[atomicCounterIncrement(num_triangles)] = tri;
 
-        memoryBarrier();
+        //memoryBarrier();
     }
 }

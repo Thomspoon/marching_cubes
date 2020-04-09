@@ -5,16 +5,17 @@
 #include "../../texture.hpp"
 #include "../computables/marching_cubes.hpp"
 
-// Particles will receive their vertex attributes after compute shader processes
+// TerrainChunk will receive their vertex attributes after compute shader processes
 // positions
-class Particles : public Drawable<Particles> {
+class TerrainChunk : public Drawable<TerrainChunk> {
 public:
-    Particles(
+    TerrainChunk(
         VertexArrayObject&& vao, 
         VertexBufferObject&& vbo, 
         VertexArrayObject&& vao_triangles, 
         VertexBufferObject&& vbo_triangles, 
-        GLuint amount
+        GLuint amount,
+        glm::ivec3 origin
     ) 
         : Drawable(std::move(vao)), 
           _vbo(std::move(vbo)),
@@ -29,11 +30,12 @@ public:
                   ShaderInfo { "shaders/mvm.vert", ShaderType::VERTEX }, 
                   ShaderInfo { "shaders/mvm.frag", ShaderType::FRAGMENT })),
           _amount(amount),
+          _origin(origin),
           _marching_cubes(MarchingCubesCompute::create(amount))
     {
     }
 
-    static std::shared_ptr<Particles> create_impl(GLuint amount) {
+    static std::shared_ptr<TerrainChunk> create_impl(GLuint amount, glm::ivec3 origin) {
         auto vao = VertexArrayObject();
         auto vbo = VertexBufferObject(VertexBufferType::ARRAY);
 
@@ -59,13 +61,13 @@ public:
 
         vao_triangles.unbind();
 
-        return std::make_shared<Particles>(std::move(vao), std::move(vbo), std::move(vao_triangles), std::move(vbo_triangles), amount);
+        return std::make_shared<TerrainChunk>(std::move(vao), std::move(vbo), std::move(vao_triangles), std::move(vbo_triangles), amount, origin);
     }
 
     DrawType draw_impl(glm::mat4& view, glm::mat4& projection, GenerationSettings& settings, bool draw_points) const {
         auto draw_type = Custom {
             [this, view, projection, settings, draw_points](){
-                std::cout << "Drawing " << _amount << " points and " << _amount_triangles << " triangles!" << std::endl;
+                std::cout << "Drawing " << _amount_triangles << " triangles!" << std::endl;
 
                 if(draw_points) {
                     _vao.bind();
@@ -85,7 +87,7 @@ public:
                 _shader_triangles.set_mat4("projection", projection);
                 _shader_triangles.set_mat4("view", view);
                 _shader_triangles.set_mat4("model", glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 0.0f, 0.0f)));
-                glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 9);
+                glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 3);
                 _vao_triangles.unbind();
             }
         };
@@ -95,7 +97,7 @@ public:
 
     void update(GenerationSettings& settings)
     {
-        _marching_cubes->dispatch(settings);    
+        _marching_cubes->dispatch(settings, _origin, int(std::cbrt(_amount)));    
 
         glm::vec4 *data = _marching_cubes->expose_points_buffer();
         if(data == nullptr) {
@@ -172,6 +174,7 @@ private:
     Shader _shader_points;
     Shader _shader_triangles;
     GLsizei _amount;
+    glm::ivec3 _origin;
     GLsizei _amount_triangles;
     std::shared_ptr<MarchingCubesCompute> _marching_cubes;
 };

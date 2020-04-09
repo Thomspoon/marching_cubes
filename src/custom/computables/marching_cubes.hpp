@@ -16,6 +16,15 @@ struct GenerationSettings
       lacunarity(2.0f)
     {
     }
+
+    bool operator==(const GenerationSettings& other) {
+        const auto epsilon = 0.001f;
+        return fabs(iso_level - other.iso_level) < epsilon &&
+               fabs(scale - other.scale) < epsilon &&
+               octaves == other.octaves &&
+               fabs(persistence - other.persistence) < epsilon &&
+               fabs(lacunarity - other.lacunarity) < epsilon;
+    }
 };
 
 // Shader Storage Buffers will pad a vec3 to a vec4 :(
@@ -388,9 +397,10 @@ public:
         );
     }
 
-    void dispatch_impl(GenerationSettings& settings) {
+    // NOTE: Remember to change shader if axis_length changes
+    void dispatch_impl(GenerationSettings& settings, glm::ivec3 offset, int axis_length) {
         // Reset triangle count
-        auto num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
+        auto num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::WRITE);
         *num_triangles = 0;
         _num_triangles_buffer.unmap_buffer();
 
@@ -399,39 +409,28 @@ public:
         _shader_stage1.set_float("scale", settings.scale);
         _shader_stage1.set_float("lacunarity", settings.lacunarity);
         _shader_stage1.set_int("octaves", settings.octaves);
-        _shader_stage1.set_int("axis_length", 16);
-        GL_CHECK(glDispatchCompute(16, 16, 16));
-        GL_CHECK(glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT));
+        _shader_stage1.set_int("axis_length", axis_length);
+        _shader_stage1.set_ivec3("offset", offset);
+        GL_CHECK(glDispatchCompute(axis_length, axis_length, axis_length));
+        GL_CHECK(glMemoryBarrier( GL_ALL_BARRIER_BITS));
 
         _shader_stage2.use();
         _shader_stage2.set_float("iso_level", settings.iso_level);
-        _shader_stage2.set_int("axis_length", 16);
-        GL_CHECK(glDispatchCompute(16, 16, 16));
-        GL_CHECK(glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT));
+        _shader_stage2.set_int("axis_length", axis_length);
+        GL_CHECK(glDispatchCompute(axis_length, axis_length, axis_length));
+        GL_CHECK(glMemoryBarrier( GL_ALL_BARRIER_BITS));
 
         num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
         _num_triangles = *reinterpret_cast<GLuint*>(num_triangles);
         _num_triangles_buffer.unmap_buffer();
 
-        const auto triangles_to_read = 10;
-        Triangle *triangles = reinterpret_cast<Triangle*>(_scratch_buffer.map_buffer_range(0, sizeof(Triangle) * triangles_to_read, BufferIntentRange::READ));
-        if(triangles == nullptr) {
-            return;
-        }
+        // const auto triangles_to_read = 10;
+        // Triangle *triangles = reinterpret_cast<Triangle*>(_scratch_buffer.map_buffer_range(0, sizeof(Triangle) * triangles_to_read, BufferIntentRange::READ));
+        // if(triangles == nullptr) {
+        //     return;
+        // }
 
-        std::cout << "Triangle output: " << std::endl;
-        auto count = 0u;
-        for(auto i = 0u; i < triangles_to_read; i++)
-        {
-            std::cout << "  Triangle: " << i << std::endl;
-            std::cout << "    " << triangles[i].vertexA.x << ", " << triangles[i].vertexA.y << ", " << triangles[i].vertexA.z << std::endl;
-            std::cout << "    " << triangles[i].vertexB.x << ", " << triangles[i].vertexB.y << ", " << triangles[i].vertexB.z << std::endl;
-            std::cout << "    " << triangles[i].vertexC.x << ", " << triangles[i].vertexC.y << ", " << triangles[i].vertexC.z << std::endl;
-        }
-        std::cout << std::endl;
-
-
-        _scratch_buffer.unmap_buffer();
+        // _scratch_buffer.unmap_buffer();
     }
 
     GLuint num_triangles() const {
