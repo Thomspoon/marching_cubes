@@ -6,11 +6,11 @@ out vec4 color;
 
 in vec3 fragment_pos;
 in vec3 surface_normal;
+in vec3 surface_color;
 
 uniform vec3 light_pos;
 uniform vec3 view_pos;
 uniform vec3 light_color;
-uniform vec3 object_color;
 
 void main()
 {
@@ -31,6 +31,6 @@ void main()
     float spec = pow(max(dot(view_dir, reflect_dir), 0.0), 32);
     vec3 specular = specular_strength * spec * light_color;  
         
-    vec3 result = (ambient + diffuse + specular) * object_color;
+    vec3 result = (ambient + diffuse + specular) * surface_color;
     color = vec4(result, 1.0f);
 }

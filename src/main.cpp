@@ -7,6 +7,8 @@
 #include "shader.hpp"
 #include "window.hpp"
 
+#include "custom/computables/marching_cubes.hpp"
+#include "custom/drawables/cube.hpp"
 #include "custom/drawables/terrain_chunk.hpp"
 
 #include "glm/glm.hpp"
@@ -25,6 +27,8 @@ Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
 
 bool focus = true;
 bool draw_points = true;
+
+glm::vec3 cube_position = glm::vec3(0.0, 100.0f, 0.0f);
 
 // custom callback 
 void process_input(float delta_time)
@@ -61,7 +65,11 @@ void process_input(float delta_time)
     }
 
     if(window.get_key(Key::KEY_P) == KeyState::PRESSED) {
-        draw_points = !draw_points;
+        draw_points = true;
+    }
+
+    if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
+        draw_points = false;
     }
 }
 
@@ -106,16 +114,23 @@ int main() try {
     auto const number_of_components = 4096;
     auto const axis_length = std::cbrt(number_of_components);
 
-    auto const num_chunks_per_axis = 1;
+    auto const num_chunks_per_axis = 5;
 
-    std::vector<std::shared_ptr<TerrainChunk>> chunks;//(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
-    for(auto i = 0; i < num_chunks_per_axis; i++) {
-        // for(auto j = 0; j < num_chunks_per_axis; j++) {
-        //     for(auto k = 0; k < num_chunks_per_axis; k++) {
-                //chunks.push_back(std::move(TerrainChunk::create(number_of_components, glm::ivec3(i * axis_length, j * axis_length, k * axis_length))));
-                chunks.push_back(std::move(TerrainChunk::create(number_of_components, glm::ivec3(0, 0, 0))));
-        //     }
-        // }
+    auto cube_light = Cube::create(cube_position);
+
+    auto marching_cubes_shader = MarchingCubesCompute::create(number_of_components);
+
+    auto chunks = std::vector<TerrainChunk>();
+    chunks.reserve(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
+    for (auto i = 0; i < num_chunks_per_axis; i++)
+    {
+        for (auto j = 0; j < num_chunks_per_axis; j++)
+        {
+            for (auto k = 0; k < num_chunks_per_axis; k++)
+            {
+                chunks.push_back(std::move(TerrainChunk::create(marching_cubes_shader, number_of_components, glm::ivec3(i* axis_length - i, j* axis_length - j, k* axis_length - k))));
+            }
+        }
     }
 
     auto delta_time = 0.0f;
@@ -153,9 +168,21 @@ int main() try {
         auto view = camera.get_view_matrix();
         auto projection = camera.get_projection();
 
-        for(auto& chunk : chunks) {
-            chunk->update(settings);
-            chunk->draw(view, projection, settings, draw_points);
+        cube_light.update(cube_position);
+        cube_light.draw(view, projection);
+
+        if(!(last_settings == settings))
+        {
+            for (auto& chunk : chunks)
+            {
+                chunk.update(settings);
+            }
+            last_settings = settings;
+        }
+
+        for (auto& chunk : chunks)
+        {
+            chunk.draw(view, projection, settings, camera.get_position(), cube_light.get_position(), draw_points);
         }
 
         ImGui::Begin("Procedural Generation Renderer");
@@ -165,8 +192,9 @@ int main() try {
         ImGui::SliderFloat("Scale:       ", &settings.scale, 0.0f, 5.0f);
         ImGui::SliderFloat("Persistence: ", &settings.persistence, 0.0f, 1.0f);
         ImGui::SliderFloat("Lacunarity:  ", &settings.lacunarity, 0.0f, 5.0f);
-        ImGui::SliderInt("Octaves:     ", &settings.octaves, 0, 10);
+        ImGui::SliderInt("Octaves:       ", &settings.octaves, 0, 10);
         ImGui::SliderFloat("Iso Level:   ", &settings.iso_level, 0.0f, 2.0f);
+        ImGui::SliderFloat("Light Height", &cube_position.y, 0.0f, 100.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 

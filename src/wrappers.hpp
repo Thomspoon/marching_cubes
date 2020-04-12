@@ -40,7 +40,7 @@ struct AtomicBufferObject {
         GL_CHECK(glGenBuffers(1, &_asb));
     }
 
-    explicit AtomicBufferObject(AtomicBufferObject&& other) 
+    explicit AtomicBufferObject(AtomicBufferObject&& other) noexcept
         : _asb(other._asb), _index(other._index)
     {
         other._asb = 0;
@@ -152,7 +152,7 @@ struct VertexArrayObject {
         GL_CHECK(glGenVertexArrays(1, &_vao));
     }
 
-    explicit VertexArrayObject(VertexArrayObject&& other) 
+    explicit VertexArrayObject(VertexArrayObject&& other) noexcept
         : _vao(other._vao) 
     {
         other._vao = 0;
@@ -231,18 +231,18 @@ struct VertexBufferObject {
     }
 
     void map_buffer_range(const void* data, uint32_t offset, uint32_t size) const {
-        void *ptr = GL_CHECK(glMapBufferRange(static_cast<GLenum>(type), offset, size, static_cast<GLbitfield>(BufferIntentRange::WRITE)));
-        memcpy(ptr, data, size);
-        GL_CHECK(glUnmapBuffer(static_cast<GLenum>(type)));
+        GL_CHECK(glBufferSubData(static_cast<GLenum>(type), offset, size, data));
+        //void *ptr = GL_CHECK(glMapBufferRange(static_cast<GLenum>(type), offset, size, static_cast<GLbitfield>(BufferIntentRange::WRITE)));
+        //memcpy(ptr, data, size);
+        //GL_CHECK(glUnmapBuffer(static_cast<GLenum>(type)));
     }
 
     template<typename ShaderType>
     void stream_from_ssbo(const ShaderStorageBuffer<ShaderType>& ssbo, uint32_t size) {
-        const auto CHUNK_MAX_SIZE = 1024u;
+        const auto CHUNK_MAX_SIZE = 8192u;
 
         auto size_sent = 0u;
 
-        auto chunk_number = 1u;
         while(size_sent < size) {
             auto chunk_size = ((size - size_sent) > CHUNK_MAX_SIZE) ? CHUNK_MAX_SIZE : size - size_sent;
             auto chunk = ssbo.map_buffer_range(size_sent, chunk_size, BufferIntentRange::READ);

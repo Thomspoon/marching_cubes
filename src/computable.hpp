@@ -19,10 +19,10 @@ public:
         return Child::create_impl(std::forward<Args>(args)...);
     }
 
-    // template <typename... Args>
-    // void update(Args&&... args) {
-    //     static_cast<Child*>(this)->update_impl(std::forward<Args>(args)...);
-    // }
+    template <typename... Args>
+    void update(Args&&... args) {
+        static_cast<Child*>(this)->update_impl(std::forward<Args>(args)...);
+    }
 
     template <typename... Args>
     void dispatch(Args&&... args) {
@@ -30,8 +30,5 @@ public:
     }
 
 protected:
-    explicit Computable(ShaderStorageBuffer<Internal>&& ssbo) : _ssbo(std::move(ssbo)) {}
     virtual ~Computable() {}
-
-    const ShaderStorageBuffer<Internal> _ssbo;
 };
