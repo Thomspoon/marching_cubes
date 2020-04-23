@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include <cstring>
+#include <vector>
 
 #include <glad/glad.h>
 
@@ -51,27 +52,26 @@ struct AtomicBufferObject {
         glDeleteBuffers(1, &_asb);
     }
 
+    void clear()
+    {
+        uint32_t clear = 0;
+        GL_CHECK(glInvalidateBufferData(GL_ATOMIC_COUNTER_BUFFER));
+        GL_CHECK(glClearBufferData(GL_ATOMIC_COUNTER_BUFFER, GL_R32UI, GL_RED, GL_UNSIGNED_INT, &clear));
+    }
+
+    InternalStorageType read()
+    {
+        uint32_t value = 0;
+        GL_CHECK(glGetBufferSubData(GL_ATOMIC_COUNTER_BUFFER, 0, sizeof(uint32_t), &value));
+        return value;
+    }
+
     // Reserve data inside buffer storage
     void reserve_storage(GLuint size, StorageType type)
     {
         GL_CHECK(glBindBufferBase(InternalBufferType, _index, _asb));
         GL_CHECK(glBufferData(InternalBufferType, size, nullptr, static_cast<GLenum>(type)));
         _size = size;
-    }
-
-    GLuint* map_buffer(BufferIntent intent) const
-    {
-        GL_CHECK(glBindBufferBase(InternalBufferType, _index, _asb));
-        auto *buffer = GL_CHECK(glMapBuffer(
-            InternalBufferType,
-            static_cast<GLbitfield>(intent)
-        ));
-        return reinterpret_cast<GLuint *>(buffer);
-    }
-
-    void unmap_buffer() const
-    {
-        GL_CHECK(glUnmapBuffer(InternalBufferType));
     }
 
     // TODO: Create MapBufferRange which lets you specify exact bytes to map
@@ -99,6 +99,16 @@ struct ShaderStorageBuffer {
 
     ~ShaderStorageBuffer() {
         glDeleteBuffers(1, &_ssb);
+    }
+
+    void bind() const
+    {
+        GL_CHECK(glBindBuffer(InternalBufferType, _ssb));
+    }
+
+    void unbind() const
+    {
+        GL_CHECK(glBindBuffer(InternalBufferType, 0))
     }
 
     // Reserve data inside buffer storage
@@ -187,7 +197,7 @@ struct VertexBufferObject {
     }
 
     ~VertexBufferObject() {
-        glGenBuffers(1, &vbo);
+        glDeleteBuffers(1, &vbo);
     }
 
     void enable_attribute_pointer(GLsizei index, GLint size, VertexDataType t_type, GLuint stride, std::size_t offset) {
@@ -230,26 +240,17 @@ struct VertexBufferObject {
         GL_CHECK(glUnmapBuffer(static_cast<GLenum>(type)));
     }
 
-    void map_buffer_range(const void* data, uint32_t offset, uint32_t size) const {
+    void buffer_sub_data(const void* data, uint32_t offset, uint32_t size) const {
         GL_CHECK(glBufferSubData(static_cast<GLenum>(type), offset, size, data));
-        //void *ptr = GL_CHECK(glMapBufferRange(static_cast<GLenum>(type), offset, size, static_cast<GLbitfield>(BufferIntentRange::WRITE)));
-        //memcpy(ptr, data, size);
-        //GL_CHECK(glUnmapBuffer(static_cast<GLenum>(type)));
     }
 
     template<typename ShaderType>
-    void stream_from_ssbo(const ShaderStorageBuffer<ShaderType>& ssbo, uint32_t size) {
-        const auto CHUNK_MAX_SIZE = 8192u;
-
-        auto size_sent = 0u;
-
-        while(size_sent < size) {
-            auto chunk_size = ((size - size_sent) > CHUNK_MAX_SIZE) ? CHUNK_MAX_SIZE : size - size_sent;
-            auto chunk = ssbo.map_buffer_range(size_sent, chunk_size, BufferIntentRange::READ);
-            map_buffer_range(chunk, size_sent, chunk_size);
-            ssbo.unmap_buffer();
-            size_sent += chunk_size;
-        }
+    void copy_from_ssbo(const ShaderStorageBuffer<ShaderType>& ssbo, uint32_t size) {
+        bind();
+        ssbo.bind();
+        glCopyBufferSubData(GL_SHADER_STORAGE_BUFFER, GL_ARRAY_BUFFER, 0, 0, size);
+        unbind();
+        ssbo.unbind();
     }
 
     void unbind() const {
@@ -258,4 +259,84 @@ struct VertexBufferObject {
 
     VboInner vbo;
     const VertexBufferType type;
+};
+
+struct Texture2D {
+    Texture2D() : _texture(0u)
+    {
+        GL_CHECK(glGenTextures(1, &_texture));
+    }
+
+    const GLuint get_id() const
+    {
+        return _texture;
+    }
+
+    // TODO: Define mipmap level
+    void specify(
+        GLint internal_format,
+        GLsizei width,
+        GLsizei height,
+        GLenum format,
+        GLenum type
+    )
+    {
+        GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, internal_format, width, height, 0, format, type, nullptr));
+    }
+
+    void set_parameteri(GLenum parameter, GLint value)
+    {
+        GL_CHECK(glTexParameteri(GL_TEXTURE_2D, parameter, value));
+    }
+
+    void bind()
+    {
+        GL_CHECK(glBindTexture(GL_TEXTURE_2D, _texture));
+    }
+
+    GLuint _texture;
+};
+
+struct FramebufferObject {
+    static FramebufferObject create() {
+        GLuint fbo;
+        GL_CHECK(glGenFramebuffers(1, &fbo));
+        return FramebufferObject(fbo);
+    }
+
+    explicit FramebufferObject(FramebufferObject&& other) noexcept
+        : _fbo(other._fbo)
+    {
+        other._fbo = 0;
+    }
+
+    ~FramebufferObject() {
+        glDeleteFramebuffers(1, &_fbo);
+    }
+
+    void bind() const
+    {
+        GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, _fbo));
+    }
+
+    void unbind() const
+    {
+        GL_CHECK(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+    }
+
+    void attach_texture(const Texture2D& texture, GLenum texture_type) const
+    {
+        GL_CHECK(glFramebufferTexture2D(GL_FRAMEBUFFER, texture_type, GL_TEXTURE_2D, texture.get_id(), 0));
+    }
+
+    void remove_color_buffer() const
+    {
+        GL_CHECK(glDrawBuffer(GL_NONE));
+        GL_CHECK(glReadBuffer(GL_NONE));
+    }
+
+private:
+    explicit FramebufferObject(GLuint fbo) : _fbo(fbo) {}
+
+    GLuint _fbo;
 };

@@ -30,6 +30,8 @@ bool draw_points = true;
 
 glm::vec3 cube_position = glm::vec3(0.0, 100.0f, 0.0f);
 
+GenerationSettings settings, last_settings;
+
 // custom callback 
 void process_input(float delta_time)
 {
@@ -66,6 +68,18 @@ void process_input(float delta_time)
 
     if(window.get_key(Key::KEY_P) == KeyState::PRESSED) {
         draw_points = true;
+    }
+
+    if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
+        draw_points = false;
+    }
+
+    if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
+        draw_points = false;
+    }
+
+    if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
+        draw_points = false;
     }
 
     if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
@@ -109,6 +123,7 @@ int main() try {
     window.set_mouse_mode(MouseMode::DISABLED);
     window.enable_capability(Capability::DEPTH_TEST);
     window.enable_capability(Capability::PROGRAM_POINT_SIZE);
+    //window.enable_capability(Capability::CULL_FACE);
 
     // Only use valid cubed integers
     auto const number_of_components = 4096;
@@ -120,6 +135,20 @@ int main() try {
 
     auto marching_cubes_shader = MarchingCubesCompute::create(number_of_components);
 
+    Texture2D texture = Texture2D();
+    texture.bind();
+    texture.specify(GL_DEPTH_COMPONENT, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT);
+    texture.set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    texture.set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    texture.set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    texture.set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    FramebufferObject depth_fbo = FramebufferObject::create();
+    depth_fbo.bind();
+    depth_fbo.attach_texture(texture, GL_DEPTH_ATTACHMENT);
+    depth_fbo.remove_color_buffer();
+    depth_fbo.unbind();
+
     auto chunks = std::vector<TerrainChunk>();
     chunks.reserve(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
     for (auto i = 0; i < num_chunks_per_axis; i++)
@@ -128,7 +157,14 @@ int main() try {
         {
             for (auto k = 0; k < num_chunks_per_axis; k++)
             {
-                chunks.push_back(std::move(TerrainChunk::create(marching_cubes_shader, number_of_components, glm::ivec3(i* axis_length - i, j* axis_length - j, k* axis_length - k))));
+                chunks.push_back(TerrainChunk::create(
+                    marching_cubes_shader,
+                    number_of_components,
+                    glm::ivec3(i* axis_length - i, j * axis_length - j, k* axis_length - k)
+                    // window,
+                    // texture,
+                    // depth_fbo
+                ));
             }
         }
     }
@@ -145,8 +181,6 @@ int main() try {
 
     ImGui_ImplGlfw_InitForOpenGL(window.get_window(), true);
     ImGui_ImplOpenGL3_Init("#version 450");
-
-    GenerationSettings settings, last_settings;
 
     settings.iso_level = 0.0f;
 

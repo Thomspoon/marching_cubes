@@ -8,7 +8,7 @@
 #define __DEBUG__
 
 Shader::Shader(GLuint program) 
-    : m_program(program)
+    : _program(program)
 {}
 
 GLuint Shader::compile_shader(const char * shader_source, GLenum shader_type) {
@@ -51,18 +51,19 @@ GLuint Shader::link_program(GLuint program) {
     return program;
 }
 
-void Shader::use() const {
-    GL_CHECK(glUseProgram(m_program));
+void Shader::use() const
+{
+    GL_CHECK(glUseProgram(_program));
 }
 
 void Shader::set_bool(const char *name, bool value) const
 {   
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown boolean variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -73,12 +74,12 @@ void Shader::set_bool(const char *name, bool value) const
 
 void Shader::set_int(const char *name, int value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown integer variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -89,12 +90,12 @@ void Shader::set_int(const char *name, int value) const
 
 void Shader::set_float(const char *name, float value) const
 { 
-    auto variable = GL_CHECK(glGetUniformLocation(m_program, name));
+    auto variable = GL_CHECK(glGetUniformLocation(_program, name));
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown floating variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -105,12 +106,12 @@ void Shader::set_float(const char *name, float value) const
 
 void Shader::set_vec2(const char *name, const glm::vec2 &value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown vec2 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -121,12 +122,12 @@ void Shader::set_vec2(const char *name, const glm::vec2 &value) const
 
 void Shader::set_vec3(const char *name, const glm::vec3 &value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown vec3 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -137,12 +138,12 @@ void Shader::set_vec3(const char *name, const glm::vec3 &value) const
 
 void Shader::set_ivec3(const char *name, const glm::ivec3 &value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown ivec3 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -153,12 +154,12 @@ void Shader::set_ivec3(const char *name, const glm::ivec3 &value) const
 
 void Shader::set_vec4(const char *name, const glm::vec4 &value) const
 { 
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown vec4 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -169,12 +170,12 @@ void Shader::set_vec4(const char *name, const glm::vec4 &value) const
 
 void Shader::set_mat2(const char *name, const glm::mat2 &mat) const
 {
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown mat2 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -185,12 +186,12 @@ void Shader::set_mat2(const char *name, const glm::mat2 &mat) const
 
 void Shader::set_mat3(const char *name, const glm::mat3 &mat) const
 {
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown mat3 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }
@@ -201,12 +202,12 @@ void Shader::set_mat3(const char *name, const glm::mat3 &mat) const
 
 void Shader::set_mat4(const char *name, const glm::mat4 &mat) const
 {
-    auto variable = glGetUniformLocation(m_program, name);
+    auto variable = glGetUniformLocation(_program, name);
 
 #ifdef __DEBUG__
     if(variable == -1) {
         std::stringstream error;
-        error << "Unknown_variable: ";
+        error << "Unknown mat4 variable: ";
         error << name;
         throw std::runtime_error(error.str().c_str());
     }

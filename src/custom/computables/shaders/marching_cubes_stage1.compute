@@ -152,7 +152,7 @@ void main()
     float frequency = scale / 100.0f;
     float amplitude = 1.0f;
     float weight = 1.0f;
-    for (int octave =0; octave < octaves; octave ++) {
+    for (int octave = 0; octave < octaves; octave++) {
 
         // TODO: might have to add offset to keep noise consistency
         float n = snoise(pos * frequency + offsets[octave]);
@@ -165,5 +165,16 @@ void main()
         frequency *= lacunarity;
     }
 
-    Grid[gid.x][gid.y][gid.z] = vec4(pos, noise);
+    float finalVal = noise;
+
+    // Draw a floor
+    if (pos.y < 5.0f) {
+        finalVal = 0.0f;
+    }
+
+    if (pos.y > 140.0f) {
+        finalVal = 140.0f;
+    }
+
+    Grid[gid.x][gid.y][gid.z] = vec4(pos, finalVal);
 }

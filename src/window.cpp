@@ -71,7 +71,7 @@ Window::Window(const unsigned int width, const unsigned int height, const char *
     glEnable              ( GL_DEBUG_OUTPUT );
     glDebugMessageCallback( MessageCallback, 0 );
 
-    m_window = window;
+    _window = window;
 }
 
 Window::~Window() {
@@ -86,11 +86,11 @@ void Window::clear_screen() {
 }
 
 bool Window::should_close() {
-    return glfwWindowShouldClose(m_window);
+    return glfwWindowShouldClose(_window);
 }
 
 GLFWwindow* Window::get_window() {
-    return m_window;
+    return _window;
 }
 
 void Window::enable_capability(Capability capability) {
@@ -102,7 +102,7 @@ void Window::polygon_mode(PolygonMode mode) {
 }
 
 void Window::close() {
-    glfwSetWindowShouldClose(m_window, true);
+    glfwSetWindowShouldClose(_window, true);
 }
 
 void Window::poll_events() {
@@ -110,12 +110,12 @@ void Window::poll_events() {
 }
 
 void Window::swap_and_poll() {
-    glfwSwapBuffers(m_window);
+    glfwSwapBuffers(_window);
     glfwPollEvents();
 }
 
 Keyboard::KeyState Window::get_key(Keyboard::Key key) {
-    return static_cast<Keyboard::KeyState>(glfwGetKey(m_window, static_cast<GLint>(key)));
+    return static_cast<Keyboard::KeyState>(glfwGetKey(_window, static_cast<GLint>(key)));
 }
 
 float Window::get_elapsed_time() {
@@ -124,18 +124,18 @@ float Window::get_elapsed_time() {
 
 void Window::set_mouse_callback(GLFWmousebuttonfun mouse_btn_func, GLFWcursorposfun mouse_pos_func) {
     if(mouse_btn_func) {
-        glfwSetMouseButtonCallback(m_window, mouse_btn_func);
+        glfwSetMouseButtonCallback(_window, mouse_btn_func);
     }
 
     if(mouse_pos_func) {
-        glfwSetCursorPosCallback(m_window, mouse_pos_func);
+        glfwSetCursorPosCallback(_window, mouse_pos_func);
     }
 }
 
 void Window::set_mouse_mode(MouseMode mode) {
-    glfwSetInputMode(m_window, GLFW_CURSOR, static_cast<int>(mode));
+    glfwSetInputMode(_window, GLFW_CURSOR, static_cast<int>(mode));
 }
 
 void Window::set_zoom_callback(GLFWscrollfun func) {
-    glfwSetScrollCallback(m_window, func);
+    glfwSetScrollCallback(_window, func);
 }

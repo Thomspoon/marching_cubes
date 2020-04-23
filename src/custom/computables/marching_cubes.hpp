@@ -386,11 +386,9 @@ public:
     }
 
     // NOTE: Remember to change shader if axis_length changes
-    void dispatch_impl(GenerationSettings& settings, glm::ivec3 offset, int axis_length) {
+    void dispatch_impl(const GenerationSettings& settings, const glm::ivec3 offset, const int axis_length) {
         // Reset triangle count
-        auto num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::WRITE);
-        *num_triangles = 0;
-        _num_triangles_buffer.unmap_buffer();
+        _num_triangles_buffer.clear();
 
         _shader_stage1.use();
         _shader_stage1.set_float("persistence", settings.persistence);
@@ -408,17 +406,7 @@ public:
         GL_CHECK(glDispatchCompute(axis_length, axis_length, axis_length));
         GL_CHECK(glMemoryBarrier( GL_SHADER_STORAGE_BARRIER_BIT));
 
-        num_triangles = _num_triangles_buffer.map_buffer(BufferIntent::READ);
-        _num_triangles = *reinterpret_cast<GLuint*>(num_triangles);
-        _num_triangles_buffer.unmap_buffer();
-
-        // const auto triangles_to_read = 10;
-        // Triangle *triangles = reinterpret_cast<Triangle*>(_scratch_buffer.map_buffer_range(0, sizeof(Triangle) * triangles_to_read, BufferIntentRange::READ));
-        // if(triangles == nullptr) {
-        //     return;
-        // }
-
-        // _scratch_buffer.unmap_buffer();
+        _num_triangles = _num_triangles_buffer.read();
     }
 
     GLuint num_triangles() const {

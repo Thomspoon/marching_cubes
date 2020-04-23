@@ -24,7 +24,7 @@ public:
 class CameraProjection {
 public:
     CameraProjection(CameraSettings settings) 
-        : m_settings(settings)
+        : _settings(settings)
     {
     }
 
@@ -33,11 +33,11 @@ public:
     virtual glm::mat4 get_projection() = 0;
 
     CameraSettings& get_settings() {
-        return m_settings;
+        return _settings;
     }
 
 private:
-    CameraSettings m_settings;
+    CameraSettings _settings;
 };
 
 class Perspective : private CameraProjection {
@@ -87,68 +87,68 @@ public:
         float yaw = CameraDefault::YAW, 
         float pitch = CameraDefault::PITCH
     )
-      : m_front(glm::vec3(0.0f, 0.0f, -1.0f)), 
-        m_movement_speed(CameraDefault::SPEED), 
-        m_mouse_sensitivity(CameraDefault::SENSITIVITY),
-        m_projection(std::make_unique<Projection>(settings))
+      : _front(glm::vec3(0.0f, 0.0f, -1.0f)), 
+        _movement_speed(CameraDefault::SPEED), 
+        _mouse_sensitivity(CameraDefault::SENSITIVITY),
+        _projection(std::make_unique<Projection>(settings))
     {
-        m_position = position;
-        m_world_up = up;
-        m_yaw = yaw;
-        m_pitch = pitch;
+        _position = position;
+        _world_up = up;
+        _yaw = yaw;
+        _pitch = pitch;
 
         update_camera_vectors();
     }
 
     glm::mat4 get_view_matrix() {
-        return glm::lookAt(m_position, m_position + m_front, m_up);
+        return glm::lookAt(_position, _position + _front, _up);
     }
 
     glm::mat4 get_projection() {
-        return m_projection->get_projection();
+        return _projection->get_projection();
     }
 
     glm::vec3 get_position() {
-        return m_position;
+        return _position;
     }
 
     void process_keyboard(CameraMovement direction, float delta_time) {
-        float velocity = m_movement_speed * delta_time;
+        float velocity = _movement_speed * delta_time;
         if (direction == CameraMovement::FORWARD)
-            m_position += m_front * velocity;
+            _position += _front * velocity;
         if (direction == CameraMovement::BACKWARD)
-            m_position -= m_front * velocity;
+            _position -= _front * velocity;
         if (direction == CameraMovement::LEFT)
-            m_position -= m_right * velocity;
+            _position -= _right * velocity;
         if (direction == CameraMovement::RIGHT)
-            m_position += m_right * velocity;
+            _position += _right * velocity;
     }
 
     void process_mouse_movement(float xoffset, float yoffset, GLboolean constrain_pitch = true) {
-        xoffset *= m_mouse_sensitivity;
-        yoffset *= m_mouse_sensitivity;
+        xoffset *= _mouse_sensitivity;
+        yoffset *= _mouse_sensitivity;
 
-        m_yaw   += xoffset;
-        m_pitch += yoffset;
+        _yaw   += xoffset;
+        _pitch += yoffset;
 
         // Make sure that when pitch is out of bounds, screen doesn't get flipped
         if (constrain_pitch)
         {
-            if (m_pitch > 89.0f) {
-                m_pitch = 89.0f;
+            if (_pitch > 89.0f) {
+                _pitch = 89.0f;
             }
 
-            if (m_pitch < -89.0f) {
-                m_pitch = -89.0f;
+            if (_pitch < -89.0f) {
+                _pitch = -89.0f;
             }
         }
 
-        // Update m_front, m_right and m_up vectors using the updated Euler angles
+        // Update _front, _right and _up vectors using the updated Euler angles
         update_camera_vectors();
     }
 
     void process_mouse_scroll(float yoffset) {
-        auto settings = m_projection->get_settings();
+        auto settings = _projection->get_settings();
         if (settings.zoom >= 1.0f && settings.zoom <= 45.0f) {
             settings.zoom -= yoffset;
         }
@@ -164,33 +164,33 @@ public:
 
 private:
     // Camera Attributes
-    glm::vec3 m_position;
-    glm::vec3 m_front;
-    glm::vec3 m_up;
-    glm::vec3 m_right;
-    glm::vec3 m_world_up;
+    glm::vec3 _position;
+    glm::vec3 _front;
+    glm::vec3 _up;
+    glm::vec3 _right;
+    glm::vec3 _world_up;
 
     // Euler Angles
-    float m_yaw;
-    float m_pitch;
+    float _yaw;
+    float _pitch;
     
     // Camera options
-    float m_movement_speed;
-    float m_mouse_sensitivity;
+    float _movement_speed;
+    float _mouse_sensitivity;
 
     // Calculates the front vector from the Camera's (updated) Euler Angles
     void update_camera_vectors() {
-        // Calculate the new m_front vector
+        // Calculate the new _front vector
         glm::vec3 front;
-        front.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
-        front.y = sin(glm::radians(m_pitch));
-        front.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
-        m_front = glm::normalize(front);
+        front.x = cos(glm::radians(_yaw)) * cos(glm::radians(_pitch));
+        front.y = sin(glm::radians(_pitch));
+        front.z = sin(glm::radians(_yaw)) * cos(glm::radians(_pitch));
+        _front = glm::normalize(front);
 
-        // Also re-calculate the m_right and m_up vector
-        m_right = glm::normalize(glm::cross(m_front, m_world_up));  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
-        m_up    = glm::normalize(glm::cross(m_right, m_front));
+        // Also re-calculate the _right and _up vector
+        _right = glm::normalize(glm::cross(_front, _world_up));  // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
+        _up    = glm::normalize(glm::cross(_right, _front));
     }
 
-    std::unique_ptr<Projection> m_projection;
+    std::unique_ptr<Projection> _projection;
 };

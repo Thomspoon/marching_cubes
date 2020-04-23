@@ -96,7 +96,6 @@ public:
 
     ~Shader() 
     {
-        std::cout << "Shader destroyed!" << std::endl;
     }
 
     void use() const;
@@ -119,5 +118,5 @@ private:
     static GLuint compile_shader(const char *shader, GLenum shader_type);
     static GLuint link_program(GLuint program);
 
-    GLuint m_program;
+    GLuint _program;
 };

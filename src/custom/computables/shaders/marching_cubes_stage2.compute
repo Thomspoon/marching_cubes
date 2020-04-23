@@ -77,8 +77,33 @@ vec3 vertex_interpolate(vec4 p1, vec4 p2)
    return p1.xyz + mu * (p2.xyz - p1.xyz);
 }
 
-int index_from_coord(int x, int y, int z) {
+int index_from_coord(int x, int y, int z)
+{
     return x * axis_length * axis_length + y * axis_length + z;
+}
+
+vec4 determine_color(vec4 normal)
+{
+    const float PI = 3.1415926535897932384626433832795;
+    const vec3 up_vector = vec3(0.0, 1.0, 0.0);
+
+    vec4 color = vec4(0.5);
+
+    float angle = acos(dot(up_vector, normal.xyz) / (length(up_vector) * length(normal.xyz))) * 180.0 / PI;
+    if(angle <= 10.0f)
+    {
+        color = vec4(0.17, 0.58, .30, 0.0);
+    }
+    else if(angle <= 60.0f)
+    {
+        color = vec4(0.71, 0.44, .20, 0.0);
+    }
+    else if(angle <= 100.0f)
+    {
+        color = vec4(0.44, 0.28, 0.13, 0.0);
+    }
+
+    return color;
 }
 
 void main()
@@ -134,7 +159,7 @@ void main()
         tri.vertex_b = vec4(vertex_interpolate(cube_corners[a1], cube_corners[b1]), 0.0f);
         tri.vertex_c = vec4(vertex_interpolate(cube_corners[a2], cube_corners[b2]), 0.0f);
 
-        // Calculate normals
+        // Calculate normals, TODO: Is averaging normals with their surrounding triangles possible?
         vec3 a = tri.vertex_a.xyz - tri.vertex_b.xyz;
         vec3 b = tri.vertex_a.xyz - tri.vertex_c.xyz;
         vec3 normal = cross(a, b);
@@ -142,10 +167,10 @@ void main()
         tri.normal_b = vec4(normal, 0.0f);
         tri.normal_c = vec4(normal, 0.0f);
 
-        // Determine color (TODO)
-        tri.color_a = vec4(1.0f);
-        tri.color_b = vec4(1.0f);
-        tri.color_c = vec4(1.0f);
+        // Determine color
+        tri.color_a = determine_color(tri.normal_a);
+        tri.color_b = determine_color(tri.normal_b);
+        tri.color_c = determine_color(tri.normal_c);
 
         triangles[atomicCounterIncrement(num_triangles)] = tri;
     }

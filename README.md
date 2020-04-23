@@ -1,4 +1,4 @@
-# Advanced Shaders
+# Final Project
 TODO
 
 # Building
@@ -16,6 +16,12 @@ cmake ..
 The program should be available under the `src` folder in the build directory.
 
 Use WASD to move around, and mouse to look around.
+
+Bonus:
+  O - turn off point-grid
+  P - turn on point-grid
+  E - turn on wire-frame
+  Q - turn off wireframe
 
 Press ESC to get mouse access to close the window.
 

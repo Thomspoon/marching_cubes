@@ -173,6 +173,11 @@ public:
     void swap_and_poll();
     float get_elapsed_time();
 
+    void get_dimensions(int& width, int& height)
+    {
+        glfwGetWindowSize(_window, &width, &height);
+    }
+
     void set_mouse_callback(GLFWmousebuttonfun mouse_btn_func, GLFWcursorposfun mouse_pos_func);
     void set_zoom_callback(GLFWscrollfun func);
     void set_mouse_mode(MouseMode mode);
@@ -180,5 +185,5 @@ public:
     Keyboard::KeyState get_key(Keyboard::Key key);
 
 private:
-    GLFWwindow *m_window;
+    GLFWwindow *_window;
 };
