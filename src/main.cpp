@@ -28,7 +28,7 @@ Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
 bool focus = true;
 bool draw_points = true;
 
-glm::vec3 cube_position = glm::vec3(0.0, 100.0f, 0.0f);
+glm::vec3 cube_position = glm::vec3(50.0, 100.0f, 50.0f);
 
 GenerationSettings settings, last_settings;
 
@@ -129,23 +129,23 @@ int main() try {
     auto const number_of_components = 4096;
     auto const axis_length = std::cbrt(number_of_components);
 
-    auto const num_chunks_per_axis = 5;
+    auto const num_chunks_per_axis = 2;
 
     auto cube_light = Cube::create(cube_position);
 
     auto marching_cubes_shader = MarchingCubesCompute::create(number_of_components);
 
-    Texture2D texture = Texture2D();
-    texture.bind();
-    texture.specify(GL_DEPTH_COMPONENT, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT);
-    texture.set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    texture.set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    texture.set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    texture.set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
+    Texture2D depth_texture = Texture2D();
+    depth_texture.bind();
+    depth_texture.specify(GL_DEPTH_COMPONENT, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT);
+    depth_texture.set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    depth_texture.set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    depth_texture.set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
+    depth_texture.set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
     FramebufferObject depth_fbo = FramebufferObject::create();
     depth_fbo.bind();
-    depth_fbo.attach_texture(texture, GL_DEPTH_ATTACHMENT);
+    depth_fbo.attach_texture(depth_texture, GL_DEPTH_ATTACHMENT);
     depth_fbo.remove_color_buffer();
     depth_fbo.unbind();
 
@@ -160,10 +160,10 @@ int main() try {
                 chunks.push_back(TerrainChunk::create(
                     marching_cubes_shader,
                     number_of_components,
-                    glm::ivec3(i* axis_length - i, j * axis_length - j, k* axis_length - k)
-                    // window,
-                    // texture,
-                    // depth_fbo
+                    glm::ivec3(i* axis_length - i, j * axis_length - j, k* axis_length - k),
+                    window,
+                    depth_texture,
+                    depth_fbo
                 ));
             }
         }
@@ -181,8 +181,6 @@ int main() try {
 
     ImGui_ImplGlfw_InitForOpenGL(window.get_window(), true);
     ImGui_ImplOpenGL3_Init("#version 450");
-
-    settings.iso_level = 0.0f;
 
     while (!window.should_close())
     {
@@ -228,14 +226,14 @@ int main() try {
         ImGui::SliderFloat("Lacunarity:  ", &settings.lacunarity, 0.0f, 5.0f);
         ImGui::SliderInt("Octaves:       ", &settings.octaves, 0, 10);
         ImGui::SliderFloat("Iso Level:   ", &settings.iso_level, 0.0f, 2.0f);
-        ImGui::SliderFloat("Light Height", &cube_position.y, 0.0f, 100.0f);
+        ImGui::SliderFloat("Light Height", &cube_position.y, 0.0f, 500.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 
         ImGui::Render();
 
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
+        
         // swap buffers and poll events
         window.swap_and_poll();
     }
