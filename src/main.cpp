@@ -20,17 +20,16 @@
 constexpr auto WINDOW_WIDTH = 1440;
 constexpr auto WINDOW_HEIGHT = 900;
 
-auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 1000.0f);
-auto camera = Camera<Perspective>(camera_settings, glm::vec3(-3.0f, 3.0f, -10.0f), glm::vec3(0.0f, 1.0f, 0.0f), 70.0, -10.0f);
+auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 50.0f);
+auto camera = Camera<Orthogonal>(camera_settings, glm::vec3(8.0f, 16.0f, 8.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.0, -90.0f);
 
-Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Advanced Shaders");
+Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Marching Cubes");
 
 bool focus = true;
 bool draw_points = true;
+bool debug_view = false;
 
-glm::vec3 cube_position = glm::vec3(50.0, 100.0f, 50.0f);
-
-GenerationSettings settings, last_settings;
+GenerationSettings settings{}, last_settings{};
 
 // custom callback 
 void process_input(float delta_time)
@@ -85,6 +84,14 @@ void process_input(float delta_time)
     if (window.get_key(Key::KEY_O) == KeyState::PRESSED) {
         draw_points = false;
     }
+
+    if (window.get_key(Key::KEY_V) == KeyState::PRESSED) {
+        debug_view = true;
+    }
+
+    if (window.get_key(Key::KEY_B) == KeyState::PRESSED) {
+        debug_view = false;
+    }
 }
 
 void process_mouse_button(GLFWwindow* glfw_window, int button, int action, int mods) {
@@ -118,6 +125,37 @@ void process_mouse_movement(GLFWwindow* glfw_window, double xpos, double ypos) {
     }
 }
 
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
+
 int main() try {
     window.set_mouse_callback(process_mouse_button, process_mouse_movement);
     window.set_mouse_mode(MouseMode::DISABLED);
@@ -129,9 +167,15 @@ int main() try {
     auto const number_of_components = 4096;
     auto const axis_length = std::cbrt(number_of_components);
 
-    auto const num_chunks_per_axis = 2;
+    auto const num_chunks_per_axis = 1;
 
-    auto cube_light = Cube::create(cube_position);
+    glm::vec3 light_position = glm::vec3(
+        axis_length / 2 * num_chunks_per_axis,
+        50.0f,
+        axis_length / 2 * num_chunks_per_axis
+    );
+
+    auto cube_light = Cube::create(light_position);
 
     auto marching_cubes_shader = MarchingCubesCompute::create(number_of_components);
 
@@ -148,6 +192,12 @@ int main() try {
     depth_fbo.attach_texture(depth_texture, GL_DEPTH_ATTACHMENT);
     depth_fbo.remove_color_buffer();
     depth_fbo.unbind();
+
+    auto shader_debug(
+        Shader::create(
+            ShaderInfo { "shaders/debug_depth.vert", ShaderType::VERTEX }, 
+            ShaderInfo { "shaders/debug_depth.frag", ShaderType::FRAGMENT })
+    );
 
     auto chunks = std::vector<TerrainChunk>();
     chunks.reserve(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
@@ -200,7 +250,7 @@ int main() try {
         auto view = camera.get_view_matrix();
         auto projection = camera.get_projection();
 
-        cube_light.update(cube_position);
+        cube_light.update(light_position);
         cube_light.draw(view, projection);
 
         if(!(last_settings == settings))
@@ -214,7 +264,15 @@ int main() try {
 
         for (auto& chunk : chunks)
         {
-            chunk.draw(view, projection, settings, camera.get_position(), cube_light.get_position(), draw_points);
+            chunk.draw(view, projection, settings, camera, cube_light.get_position(), draw_points, debug_view);
+        }
+
+        if(debug_view)
+        {
+            shader_debug.use();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, depth_texture.get_id());
+            renderQuad();
         }
 
         ImGui::Begin("Procedural Generation Renderer");
@@ -226,7 +284,7 @@ int main() try {
         ImGui::SliderFloat("Lacunarity:  ", &settings.lacunarity, 0.0f, 5.0f);
         ImGui::SliderInt("Octaves:       ", &settings.octaves, 0, 10);
         ImGui::SliderFloat("Iso Level:   ", &settings.iso_level, 0.0f, 2.0f);
-        ImGui::SliderFloat("Light Height", &cube_position.y, 0.0f, 500.0f);
+        ImGui::SliderFloat("Light Height", &light_position.y, 0.0f, 500.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 

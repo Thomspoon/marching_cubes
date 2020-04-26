@@ -58,6 +58,26 @@ public:
     }
 };
 
+class Orthogonal : private CameraProjection {
+public:
+    Orthogonal(CameraSettings settings) 
+        : CameraProjection(settings)
+    {
+    }
+
+    glm::mat4 get_projection() {
+        auto settings = get_settings();
+        return glm::ortho(
+            -25.0f,
+            25.0f,
+            -25.0f,
+            25.0f,
+            settings.near,
+            settings.far
+        );
+    }
+};
+
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum class CameraMovement {
     FORWARD,
@@ -106,6 +126,10 @@ public:
 
     glm::mat4 get_projection() {
         return _projection->get_projection();
+    }
+
+    glm::vec3 get_forward() {
+        return _front;
     }
 
     glm::vec3 get_position() {
