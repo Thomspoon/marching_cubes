@@ -20,16 +20,14 @@
 constexpr auto WINDOW_WIDTH = 1440;
 constexpr auto WINDOW_HEIGHT = 900;
 
-auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 50.0f);
-auto camera = Camera<Orthogonal>(camera_settings, glm::vec3(8.0f, 16.0f, 8.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.0, -90.0f);
+auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
+auto camera = Camera<Perspective>(camera_settings, glm::vec3(16.0f, 10.0f, 16.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0, -150.0f);
 
 Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Marching Cubes");
 
 bool focus = true;
 bool draw_points = true;
 bool debug_view = false;
-
-GenerationSettings settings{}, last_settings{};
 
 // custom callback 
 void process_input(float delta_time)
@@ -156,12 +154,17 @@ void renderQuad()
     glBindVertexArray(0);
 }
 
+glm::vec3 eye(7.586, 0.0f, 8.0f);
+
 int main() try {
     window.set_mouse_callback(process_mouse_button, process_mouse_movement);
     window.set_mouse_mode(MouseMode::DISABLED);
     window.enable_capability(Capability::DEPTH_TEST);
     window.enable_capability(Capability::PROGRAM_POINT_SIZE);
     //window.enable_capability(Capability::CULL_FACE);
+
+    GenerationSettings settings, last_settings;
+    settings.scale = 0.151;
 
     // Only use valid cubed integers
     auto const number_of_components = 4096;
@@ -232,6 +235,8 @@ int main() try {
     ImGui_ImplGlfw_InitForOpenGL(window.get_window(), true);
     ImGui_ImplOpenGL3_Init("#version 450");
 
+    bool first = true;
+
     while (!window.should_close())
     {
         auto current_frame = window.get_elapsed_time();
@@ -253,8 +258,13 @@ int main() try {
         cube_light.update(light_position);
         cube_light.draw(view, projection);
 
-        if(!(last_settings == settings))
+        if(first || !(last_settings == settings))
         {
+            if(first)
+            {
+                first = false;
+            }
+
             for (auto& chunk : chunks)
             {
                 chunk.update(settings);
@@ -264,14 +274,18 @@ int main() try {
 
         for (auto& chunk : chunks)
         {
-            chunk.draw(view, projection, settings, camera, cube_light.get_position(), draw_points, debug_view);
+            chunk.draw(view, projection, settings, camera, light_position, draw_points, debug_view);
         }
 
         if(debug_view)
         {
+            //float near_plane = 0.1f, far_plane = 100.0f;
             shader_debug.use();
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, depth_texture.get_id());
+
+            // shader_debug.set_float("near_plane", near_plane);
+            // shader_debug.set_float("far_plane", far_plane);
             renderQuad();
         }
 
@@ -285,6 +299,9 @@ int main() try {
         ImGui::SliderInt("Octaves:       ", &settings.octaves, 0, 10);
         ImGui::SliderFloat("Iso Level:   ", &settings.iso_level, 0.0f, 2.0f);
         ImGui::SliderFloat("Light Height", &light_position.y, 0.0f, 500.0f);
+        ImGui::SliderFloat("Eye X", &eye.x, 0.0f, 16.0f);
+        ImGui::SliderFloat("Eye Y", &eye.y, 0.0f, 16.0f);
+        ImGui::SliderFloat("Eye Z", &eye.z, 0.0f, 16.0f);
         ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         ImGui::End();
 

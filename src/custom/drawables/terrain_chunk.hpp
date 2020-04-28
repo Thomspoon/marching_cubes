@@ -10,6 +10,8 @@
 #include "../computables/marching_cubes.hpp"
 #include "../../window.hpp"
 
+extern glm::vec3 eye;
+
 // TerrainChunk will receive their vertex attributes after compute shader processes
 // positions
 class TerrainChunk : public Drawable<TerrainChunk> {
@@ -106,16 +108,10 @@ public:
     template<typename Projection>
     void draw_depth_map(
         glm::vec3& light_position,
-        Camera<Projection>& camera
+        Camera<Projection>& camera,
+        glm::mat4& light_space_matrix
     )
     {
-        // Calculate view from light's position
-        float near_plane = 1.0f, far_plane = 75.0f;
-        glm::mat4 light_projection = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, near_plane, far_plane);
-        glm::mat4 light_view = glm::lookAt(light_position, glm::vec3(16.0f, 16.0f, 16.0f), glm::vec3(0.0, 1.0, 0.0));
-        //glm::mat4 light_view = camera.get_view_matrix();
-        glm::mat4 light_space_matrix = light_projection * light_view;
-
         // Send light space matrix
         _shader_depth.use();
         _shader_depth.set_mat4("light_space_matrix", light_space_matrix);
@@ -131,7 +127,7 @@ public:
 
         // Draw depth-map
         _vao_triangles.bind();
-        _shader_depth.set_mat4("model", glm::translate(glm::mat4x4(1.0), _origin));
+        _shader_depth.set_mat4("model", glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 0.0f, 0.0f)));
         glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 3);
         _vao_triangles.unbind();
         _depth_fbo.unbind();
@@ -149,7 +145,8 @@ public:
         GenerationSettings& settings,
         Camera<Projection>& camera,
         glm::vec3 light_position,
-        bool draw_points
+        bool draw_points,
+        glm::mat4& light_space_matrix
     )
     {
         if (draw_points)
@@ -177,6 +174,7 @@ public:
         _shader_triangles.set_vec3("light_pos", light_position);
         _shader_triangles.set_vec3("view_pos", camera.get_position());
         _shader_triangles.set_vec3("light_color", glm::vec3(1.0f, 1.0f, 1.0f));
+        _shader_triangles.set_mat4("light_space_matrix", light_space_matrix);
         glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 3);
         _vao_triangles.unbind();
     }
@@ -192,7 +190,15 @@ public:
         bool draw_debug
     ) 
     {
-        draw_depth_map(light_position, camera);
+        // Calculate view from light's position
+        float near_plane = 1.0f, far_plane = 100.0f;
+        //glm::mat4 light_projection = glm::perspective(glm::radians(45.0f), 1.0f, near_plane, far_plane);
+        glm::mat4 light_projection = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, near_plane, far_plane);
+        glm::mat4 light_view = glm::lookAt(light_position, eye, glm::vec3(0.0, 1.0, 0.0));
+        //glm::mat4 light_view = camera.get_view_matrix();
+        glm::mat4 light_space_matrix = light_projection * light_view;
+
+        draw_depth_map(light_position, camera, light_space_matrix);
 
         if(draw_debug == false) {
             draw_marching_cubes(
@@ -201,7 +207,8 @@ public:
                 settings,
                 camera,
                 light_position,
-                draw_points
+                draw_points,
+                light_space_matrix
             );
         }
     }
