@@ -48,7 +48,7 @@ struct Triangle {
 
 layout (std430, binding = 0) buffer Pos
 {
-    vec4[16][16][16] points;
+    vec4[100][100][100] points;
 };
 
 layout (std430, binding = 1) buffer TriangleBuffer
@@ -106,6 +106,32 @@ vec4 determine_color(vec4 normal)
     return color;
 }
 
+vec4 fix_triangle_normal(vec4 triangle_vertex, vec4 triangle_normal, Triangle triangle_array[5], int num_triangles)
+{
+    int num_normals = 1;
+    vec4 normal = triangle_normal;
+    for(int i = 0; i < num_triangles; i++)
+    {
+        if(triangle_vertex == triangle_array[i].vertex_a)
+        {
+            normal += triangle_array[i].normal_a;
+            num_normals++;
+        }
+        else if(triangle_vertex == triangle_array[i].vertex_b)
+        {
+            normal += triangle_array[i].normal_b;
+            num_normals++;
+        }
+        else if(triangle_vertex == triangle_array[i].vertex_c)
+        {
+            normal += triangle_array[i].normal_c;
+            num_normals++;
+        }
+    }
+
+    return (normal / num_normals);
+}
+
 void main()
 {
     ivec3 gid = ivec3(gl_GlobalInvocationID.xyz);
@@ -142,6 +168,9 @@ void main()
 
     if(cube_index == 0 || cube_index == 255) return;
 
+    int num_triangles_computed = 0;
+    Triangle triangle_array[5];
+
     // Create triangles for current cube configuration
     for (int i = 0; triangulation[cube_index][i] != -1; i +=3) {
         int a0 = corner_index_a_from_edge[triangulation[cube_index][i]];
@@ -173,5 +202,18 @@ void main()
         tri.color_c = determine_color(tri.normal_c);
 
         triangles[atomicCounterIncrement(num_triangles)] = tri;
+        triangle_array[num_triangles_computed] = tri;
+        num_triangles_computed++;
+    }
+
+    // Do a better job at calculating triangle normals
+    for(int index = 0; index < num_triangles_computed; index++)
+    {
+        // Get triangle
+        Triangle tri = triangle_array[index];
+
+        tri.normal_a = fix_triangle_normal(tri.vertex_a, tri.normal_a, triangle_array, num_triangles_computed);
+        tri.normal_b = fix_triangle_normal(tri.vertex_b, tri.normal_b, triangle_array, num_triangles_computed);
+        tri.normal_c = fix_triangle_normal(tri.vertex_c, tri.normal_c, triangle_array, num_triangles_computed);
     }
 }

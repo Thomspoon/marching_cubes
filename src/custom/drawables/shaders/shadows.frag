@@ -28,6 +28,7 @@ float shadow_calculation(vec4 frag_light_space)
 
     // get depth of current fragment from light's perspective
     float current_depth = projection_coords.z;
+
     // calculate bias (based on depth map resolution and slope)
     vec3 normal = normalize(fs_in.normal);
     vec3 light_dir = normalize(light_pos - fs_in.frag_position);

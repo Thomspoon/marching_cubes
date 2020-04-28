@@ -24,8 +24,8 @@ public:
         GLuint amount_points,
         glm::vec3 origin,
         std::shared_ptr<MarchingCubesCompute> compute_shader,
-        Texture2D& depth_texture,
-        FramebufferObject& depth_fbo,
+        Texture2D&& depth_texture,
+        FramebufferObject&& depth_fbo,
         Window& window
     ) : _vao_points(std::move(vao_points)),
         _vbo_points(std::move(vbo_points)),
@@ -42,8 +42,8 @@ public:
         _amount_points(amount_points),
         _origin(origin),
         _marching_cubes(compute_shader),
-        _depth_texture(depth_texture),
-        _depth_fbo(depth_fbo),
+        _depth_texture(std::move(depth_texture)),
+        _depth_fbo(std::move(depth_fbo)),
         _shader_depth(
             Shader::create(
                 ShaderInfo { "shaders/depth_map.vert", ShaderType::VERTEX })
@@ -57,9 +57,7 @@ public:
         std::shared_ptr<MarchingCubesCompute> compute_shader, 
         GLuint num_points, 
         glm::vec3 origin,
-        Window& window,
-        Texture2D& texture,
-        FramebufferObject& depth_fbo
+        Window& window
     )
     {
         auto vao_points = VertexArrayObject();
@@ -91,6 +89,20 @@ public:
 
         vao_triangles.unbind();
 
+        Texture2D depth_texture = Texture2D();
+        depth_texture.bind();
+        depth_texture.specify(GL_DEPTH_COMPONENT, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT);
+        depth_texture.set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        depth_texture.set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        depth_texture.set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
+        depth_texture.set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+        FramebufferObject depth_fbo = FramebufferObject::create();
+        depth_fbo.bind();
+        depth_fbo.attach_texture(depth_texture, GL_DEPTH_ATTACHMENT);
+        depth_fbo.remove_color_buffer();
+        depth_fbo.unbind();
+
         return TerrainChunk(
             std::move(vao_points),
             std::move(vbo_points),
@@ -99,8 +111,8 @@ public:
             num_points,
             origin,
             compute_shader,
-            texture,
-            depth_fbo,
+            std::move(depth_texture),
+            std::move(depth_fbo),
             window
         );
     }
@@ -128,6 +140,7 @@ public:
         // Draw depth-map
         _vao_triangles.bind();
         _shader_depth.set_mat4("model", glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 0.0f, 0.0f)));
+        _shader_depth.set_vec3("offset", _origin); // subtract the origin from our position
         glDrawArrays(GL_TRIANGLES, 0, _amount_triangles * 3);
         _vao_triangles.unbind();
         _depth_fbo.unbind();
@@ -191,9 +204,9 @@ public:
     ) 
     {
         // Calculate view from light's position
-        float near_plane = 1.0f, far_plane = 100.0f;
+        float near_plane = 1.0f, far_plane = 200.0f;
         //glm::mat4 light_projection = glm::perspective(glm::radians(45.0f), 1.0f, near_plane, far_plane);
-        glm::mat4 light_projection = glm::ortho(-25.0f, 25.0f, -25.0f, 25.0f, near_plane, far_plane);
+        glm::mat4 light_projection = glm::ortho(-125.0f, 125.0f, -125.0f, 125.0f, near_plane, far_plane);
         glm::mat4 light_view = glm::lookAt(light_position, eye, glm::vec3(0.0, 1.0, 0.0));
         //glm::mat4 light_view = camera.get_view_matrix();
         glm::mat4 light_space_matrix = light_projection * light_view;
@@ -247,8 +260,8 @@ private:
     GLsizei _amount_triangles;
     std::shared_ptr<MarchingCubesCompute> _marching_cubes;
 
-    Texture2D& _depth_texture;
-    FramebufferObject& _depth_fbo;
+    Texture2D _depth_texture;
+    FramebufferObject _depth_fbo;
     Shader _shader_depth;
 
     Window& _window;

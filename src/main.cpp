@@ -20,8 +20,8 @@
 constexpr auto WINDOW_WIDTH = 1440;
 constexpr auto WINDOW_HEIGHT = 900;
 
-auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
-auto camera = Camera<Perspective>(camera_settings, glm::vec3(16.0f, 10.0f, 16.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0, -150.0f);
+auto camera_settings = CameraSettings(CameraDefault::ZOOM, WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 1000.0f);
+auto camera = Camera<Perspective>(camera_settings, glm::vec3(0.0f, 10.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0, 0.0f);
 
 Window window(WINDOW_WIDTH, WINDOW_HEIGHT, "Marching Cubes");
 
@@ -83,13 +83,13 @@ void process_input(float delta_time)
         draw_points = false;
     }
 
-    if (window.get_key(Key::KEY_V) == KeyState::PRESSED) {
-        debug_view = true;
-    }
+    // if (window.get_key(Key::KEY_V) == KeyState::PRESSED) {
+    //     debug_view = true;
+    // }
 
-    if (window.get_key(Key::KEY_B) == KeyState::PRESSED) {
-        debug_view = false;
-    }
+    // if (window.get_key(Key::KEY_B) == KeyState::PRESSED) {
+    //     debug_view = false;
+    // }
 }
 
 void process_mouse_button(GLFWwindow* glfw_window, int button, int action, int mods) {
@@ -123,6 +123,7 @@ void process_mouse_movement(GLFWwindow* glfw_window, double xpos, double ypos) {
     }
 }
 
+// TODO: Remove, just for looking at depth data
 // renderQuad() renders a 1x1 XY quad in NDC
 // -----------------------------------------
 unsigned int quadVAO = 0;
@@ -167,14 +168,14 @@ int main() try {
     settings.scale = 0.151;
 
     // Only use valid cubed integers
-    auto const number_of_components = 4096;
+    auto const number_of_components = 1000000;
     auto const axis_length = std::cbrt(number_of_components);
 
     auto const num_chunks_per_axis = 1;
 
     glm::vec3 light_position = glm::vec3(
         axis_length / 2 * num_chunks_per_axis,
-        50.0f,
+        200.0f,
         axis_length / 2 * num_chunks_per_axis
     );
 
@@ -182,25 +183,11 @@ int main() try {
 
     auto marching_cubes_shader = MarchingCubesCompute::create(number_of_components);
 
-    Texture2D depth_texture = Texture2D();
-    depth_texture.bind();
-    depth_texture.specify(GL_DEPTH_COMPONENT, 1024, 1024, GL_DEPTH_COMPONENT, GL_FLOAT);
-    depth_texture.set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    depth_texture.set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    depth_texture.set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
-    depth_texture.set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-    FramebufferObject depth_fbo = FramebufferObject::create();
-    depth_fbo.bind();
-    depth_fbo.attach_texture(depth_texture, GL_DEPTH_ATTACHMENT);
-    depth_fbo.remove_color_buffer();
-    depth_fbo.unbind();
-
-    auto shader_debug(
-        Shader::create(
-            ShaderInfo { "shaders/debug_depth.vert", ShaderType::VERTEX }, 
-            ShaderInfo { "shaders/debug_depth.frag", ShaderType::FRAGMENT })
-    );
+    // auto shader_debug(
+    //     Shader::create(
+    //         ShaderInfo { "shaders/debug_depth.vert", ShaderType::VERTEX }, 
+    //         ShaderInfo { "shaders/debug_depth.frag", ShaderType::FRAGMENT })
+    // );
 
     auto chunks = std::vector<TerrainChunk>();
     chunks.reserve(num_chunks_per_axis * num_chunks_per_axis * num_chunks_per_axis);
@@ -214,9 +201,7 @@ int main() try {
                     marching_cubes_shader,
                     number_of_components,
                     glm::ivec3(i* axis_length - i, j * axis_length - j, k* axis_length - k),
-                    window,
-                    depth_texture,
-                    depth_fbo
+                    window
                 ));
             }
         }
@@ -277,17 +262,17 @@ int main() try {
             chunk.draw(view, projection, settings, camera, light_position, draw_points, debug_view);
         }
 
-        if(debug_view)
-        {
-            //float near_plane = 0.1f, far_plane = 100.0f;
-            shader_debug.use();
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, depth_texture.get_id());
+        // if(debug_view)
+        // {
+        //     //float near_plane = 0.1f, far_plane = 100.0f;
+        //     shader_debug.use();
+        //     glActiveTexture(GL_TEXTURE0);
+        //     glBindTexture(GL_TEXTURE_2D, depth_texture.get_id());
 
-            // shader_debug.set_float("near_plane", near_plane);
-            // shader_debug.set_float("far_plane", far_plane);
-            renderQuad();
-        }
+        //     // shader_debug.set_float("near_plane", near_plane);
+        //     // shader_debug.set_float("far_plane", far_plane);
+        //     renderQuad();
+        // }
 
         ImGui::Begin("Procedural Generation Renderer");
 

@@ -5,8 +5,9 @@ layout (location = 2) in vec4 a_color;
 
 uniform mat4 light_space_matrix;
 uniform mat4 model;
+uniform vec3 offset;
 
 void main()
 {
-    gl_Position = light_space_matrix * model * vec4(a_position.xyz, 1.0);
+    gl_Position = light_space_matrix * model * vec4(a_position.xyz - offset, 1.0);
 } 
